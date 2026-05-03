@@ -10,7 +10,7 @@
 - แสดงข้อมูลเบื้องต้น เช่น จำนวนแถว/คอลัมน์, ตัวอย่างข้อมูล, ชนิดข้อมูล และค่าสถิติเบื้องต้น
 - ตรวจสอบ missing values ของแต่ละคอลัมน์
 - สร้างกราฟสำรวจข้อมูล เช่น heatmap, histogram, correlation matrix, boxplot และ pairplot
-- บันทึกกราฟทั้งหมดเป็นไฟล์ `.png` ลงในโฟลเดอร์ `output`
+- บันทึกกราฟทั้งหมดเป็นไฟล์ `.png` ลงในโฟลเดอร์ `output/eda_output`
 
 ## ข้อมูลที่ใช้
 
@@ -27,7 +27,7 @@ patients_with_tc_hdl_ratio_with_drugflag.xlsx
 หลังรันสคริปต์ จะได้ไฟล์กราฟในโฟลเดอร์:
 
 ```text
-output/
+output/eda_output/
 ```
 
 ตัวอย่างไฟล์ผลลัพธ์:
@@ -46,20 +46,31 @@ output/
 .\.venv\Scripts\python.exe .\code\preprocess.py
 ```
 
+ถ้าต้องติดตั้ง dependency ใหม่ ให้ใช้:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
 ## โครงสร้างโปรเจกต์
 
 ```text
 .
 ├── code/
-│   └── preprocess.py
+│   ├── preprocess.py
+│   └── feature_importance.py
 ├── job/
-│   └── EDA-stroke.md
+│   ├── EDA-stroke.md
+│   └── feature-importance-stroke.md
 ├── output/
+│   ├── eda_output/
+│   └── feature_importance_output/
 ├── paper/
 │   ├── README.md
 │   └── TEMPLATE.md
 ├── patients_with_tc_hdl_ratio_with_drugflag.xlsx
 ├── README.md
+├── requirements.txt
 └── WORKLOG.md
 ```
 
@@ -68,6 +79,7 @@ output/
 - `README.md` - อธิบายว่าโปรเจกต์นี้คืออะไร ทำอะไร ใช้งานอย่างไร และได้ผลลัพธ์อะไร
 - `DATASET.md` - อธิบาย dataset, data dictionary, missing values และข้อสังเกตจาก EDA
 - `job/EDA-stroke.md` - อธิบายขั้นตอนการทำ EDA และผลลัพธ์จากกราฟที่สร้าง
+- `job/feature-importance-stroke.md` - อธิบายการทำ feature importance สำหรับ stroke target
 - `paper/` - เก็บสรุปงานวิจัยที่อ่าน พร้อมลิงก์อ้างอิงและ template สำหรับสรุป paper
 - `WORKLOG.md` - บันทึกประวัติการแก้ไขและคำอธิบายงานที่อัปเดตในแต่ละครั้ง
 

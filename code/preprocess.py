@@ -19,8 +19,8 @@ if hasattr(sys.stdout, "reconfigure"):
 # ตั้งค่า style ของกราฟ
 sns.set(style="whitegrid")
 
-OUTPUT_DIR = Path("output")
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR = Path("output") / "eda_output"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 PAIRPLOT_MAX_ROWS = 1000
 PAIRPLOT_MAX_COLUMNS = 8
 

@@ -72,7 +72,7 @@ df.isnull().sum()
 และสร้างกราฟ heatmap เพื่อดู pattern ของ missing values:
 
 ```text
-output/missing_values_heatmap.png
+output/eda_output/missing_values_heatmap.png
 ```
 
 ข้อสังเกตสำคัญ:
@@ -93,7 +93,7 @@ df.hist(figsize=(12, 10))
 ผลลัพธ์ถูกบันทึกที่:
 
 ```text
-output/feature_distributions.png
+output/eda_output/feature_distributions.png
 ```
 
 กราฟนี้ใช้ดูการกระจายของข้อมูล เช่น:
@@ -115,7 +115,7 @@ corr = df.corr(numeric_only=True)
 และสร้าง heatmap:
 
 ```text
-output/correlation_matrix.png
+output/eda_output/correlation_matrix.png
 ```
 
 กราฟนี้ใช้ดูความสัมพันธ์เชิงเส้นระหว่างตัวแปร เช่น ความสัมพันธ์ระหว่างตัวแปรผลแล็บ ความดัน BMI อายุ และ flag ต่าง ๆ
@@ -132,16 +132,16 @@ for col in df.select_dtypes(include=np.number).columns:
 ผลลัพธ์ถูกบันทึกเป็นไฟล์:
 
 ```text
-output/boxplot_*.png
+output/eda_output/boxplot_*.png
 ```
 
 ตัวอย่างไฟล์:
 
-- `output/boxplot_age.png`
-- `output/boxplot_bmi.png`
-- `output/boxplot_bps.png`
-- `output/boxplot_LDL.png`
-- `output/boxplot_TC_HDL_ratio.png`
+- `output/eda_output/boxplot_age.png`
+- `output/eda_output/boxplot_bmi.png`
+- `output/eda_output/boxplot_bps.png`
+- `output/eda_output/boxplot_LDL.png`
+- `output/eda_output/boxplot_TC_HDL_ratio.png`
 
 ข้อสังเกตจาก boxplot:
 
@@ -153,7 +153,7 @@ output/boxplot_*.png
 สคริปต์สร้าง pairplot เพื่อดูความสัมพันธ์ระหว่างตัวแปรตัวเลขบางส่วน:
 
 ```text
-output/pairplot.png
+output/eda_output/pairplot.png
 ```
 
 เนื่องจาก dataset มีขนาดใหญ่ จึงจำกัด pairplot ให้ใช้:
@@ -201,7 +201,7 @@ if 'tc_hdl_ratio' in df.columns and 'age' in df.columns:
 ผลลัพธ์หลักจาก EDA ถูกเก็บในโฟลเดอร์:
 
 ```text
-output/
+output/eda_output/
 ```
 
 ไฟล์สำคัญที่สร้างแล้ว:

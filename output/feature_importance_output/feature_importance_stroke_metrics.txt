@@ -1,0 +1,53 @@
+Stroke Prediction Model Metrics
+===============================
+
+Target definition: ICD-10 I60-I69* in PrincipleDiagnosis only
+Rows: 218,772
+Features before imputation: 26
+Stroke records: 5,170
+Non-stroke records: 213,602
+Stroke prevalence: 2.36%
+Best holdout model by ROC-AUC: random_forest
+
+Cross-Validation Summary
+------------------------
+        model  roc_auc_mean  roc_auc_std  accuracy_mean  accuracy_std  precision_mean  precision_std  recall_mean  recall_std  f1_mean   f1_std
+random_forest      0.936537     0.003268       0.969016      0.000850        0.372348       0.012856     0.454468    0.017724 0.409253 0.013420
+      xgboost      0.928762     0.005957       0.864548      0.001738        0.129781       0.003462     0.829913    0.019799 0.224460 0.005868
+
+Holdout Metrics
+---------------
+        model  roc_auc  accuracy  precision   recall       f1
+random_forest 0.963028  0.971532   0.432927 0.658933 0.522539
+      xgboost 0.935749  0.844349   0.119118 0.873163 0.209637
+
+Confusion Matrix: random_forest
+[[52284  1116]
+ [  441   852]]
+
+Classification Report
+              precision    recall  f1-score   support
+
+           0     0.9916    0.9791    0.9853     53400
+           1     0.4329    0.6589    0.5225      1293
+
+    accuracy                         0.9715     54693
+   macro avg     0.7123    0.8190    0.7539     54693
+weighted avg     0.9784    0.9715    0.9744     54693
+
+
+Confusion Matrix: xgboost
+[[45051  8349]
+ [  164  1129]]
+
+Classification Report
+              precision    recall  f1-score   support
+
+           0     0.9964    0.8437    0.9137     53400
+           1     0.1191    0.8732    0.2096      1293
+
+    accuracy                         0.8443     54693
+   macro avg     0.5577    0.8584    0.5617     54693
+weighted avg     0.9756    0.8443    0.8970     54693
+
+

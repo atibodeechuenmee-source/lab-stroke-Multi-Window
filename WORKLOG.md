@@ -11,13 +11,14 @@
 - อ่านข้อมูลจากไฟล์ Excel
 - แสดงข้อมูลเบื้องต้น เช่น shape, head, data types, summary statistics และ missing values
 - สร้างกราฟสำหรับตรวจสอบข้อมูล เช่น missing values heatmap, distribution, correlation, boxplot และ pairplot
-- บันทึกกราฟทั้งหมดเป็นไฟล์ภาพ `.png` ลงในโฟลเดอร์ `output`
+- บันทึกกราฟทั้งหมดเป็นไฟล์ภาพ `.png` ลงในโฟลเดอร์ `output/eda_output`
 
 ## โครงสร้างไฟล์สำคัญ
 
 - `code/preprocess.py` - สคริปต์หลักสำหรับอ่านข้อมูล วิเคราะห์เบื้องต้น และสร้างกราฟ
 - `patients_with_tc_hdl_ratio_with_drugflag.xlsx` - ไฟล์ข้อมูลต้นทาง
-- `output/` - โฟลเดอร์เก็บไฟล์กราฟที่สร้างจากสคริปต์
+- `output/eda_output/` - โฟลเดอร์เก็บไฟล์กราฟจาก EDA
+- `output/feature_importance_output/` - โฟลเดอร์เก็บผลลัพธ์จาก feature importance
 - `.venv/` - virtual environment สำหรับรัน Python และ dependency ของโปรเจกต์
 
 ## วิธีรัน
@@ -33,6 +34,31 @@
 ## ประวัติการอัปเดต
 
 ### 2026-05-03
+
+แยกโฟลเดอร์ผลลัพธ์ใน `output`
+
+- สร้าง `output/eda_output` สำหรับผลลัพธ์จาก EDA
+- สร้าง `output/feature_importance_output` สำหรับผลลัพธ์จาก feature importance
+- ปรับ `code/preprocess.py` ให้บันทึกกราฟ EDA ลง `output/eda_output`
+- ปรับ `code/feature_importance.py` ให้บันทึกตาราง กราฟ และ metrics ลง `output/feature_importance_output`
+- ย้ายไฟล์ output เดิมไปยังโฟลเดอร์ย่อยตามประเภทงาน
+- อัปเดตเอกสารให้ชี้ path output ใหม่
+
+เพิ่มงาน `feature importance`
+
+- เพิ่มสคริปต์ `code/feature_importance.py`
+- สร้าง target `stroke_flag` จากรหัส ICD-10 กลุ่ม `I60-I69*` ใน `PrincipleDiagnosis` เท่านั้น
+- ใช้ Random Forest แบบ class-balanced เพื่อคำนวณ feature importance
+- บันทึกผลลัพธ์เป็น `output/feature_importance_output/feature_importance_stroke.csv`, `output/feature_importance_output/feature_importance_stroke.png` และ `output/feature_importance_output/feature_importance_stroke_metrics.txt`
+- เพิ่มเอกสาร `job/feature-importance-stroke.md` เพื่ออธิบายวิธีทำ ผลลัพธ์ และข้อควรระวัง
+- ติดตั้ง dependency `scikit-learn` ใน `.venv`
+- เพิ่ม `requirements.txt` เพื่อระบุ dependency ที่ใช้ในโปรเจกต์
+- เพิ่ม SHAP analysis ทั้ง global summary, SHAP bar และ local waterfall plot
+- เพิ่ม Stratified K-Fold Cross Validation สำหรับเปรียบเทียบความเสถียรของโมเดล
+- เพิ่ม XGBoost เพื่อเปรียบเทียบกับ RandomForest
+- ปรับ RandomForest `min_samples_leaf` จาก 20 เป็น 5 เพื่อลด over-smoothing
+- เพิ่มไฟล์ output สำหรับ `model_cv_metrics`, `model_holdout_metrics`, `feature_importance_model_comparison` และ `shap_*`
+- เพิ่มคอมเมนต์และ docstring ภาษาไทยอย่างละเอียดใน `code/feature_importance.py` เพื่ออธิบาย workflow, target, preprocessing, cross-validation, model comparison และ SHAP
 
 เพิ่มสรุปงานวิจัยในโฟลเดอร์ `paper`
 
@@ -85,7 +111,7 @@
 ผลลัพธ์ที่ตรวจสอบแล้ว:
 
 - สคริปต์รันสำเร็จ
-- มีไฟล์กราฟถูกสร้างใน `output` จำนวน 29 ไฟล์
+- มีไฟล์กราฟถูกสร้างใน `output/eda_output` จำนวน 29 ไฟล์
 - ตัวอย่างไฟล์ที่ได้: `missing_values_heatmap.png`, `feature_distributions.png`, `correlation_matrix.png`, `pairplot.png`, `boxplot_*.png`
 
 หมายเหตุ:

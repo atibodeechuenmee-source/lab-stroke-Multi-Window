@@ -126,7 +126,7 @@
 ## แนวทางใช้งาน Dataset ต่อ
 
 - ตรวจสอบความหมายของรหัสในคอลัมน์ categorical/flag เช่น `sex`, `smoke`, `drinking`, `AF`
-- ตรวจสอบ outliers ของผลแล็บและความดันโลหิต โดยดูไฟล์ `output/boxplot_*.png`
+- ตรวจสอบ outliers ของผลแล็บและความดันโลหิต โดยดูไฟล์ `output/eda_output/boxplot_*.png`
 - ตัดสินใจวิธีจัดการ missing values แยกตามชนิดข้อมูล เช่น ลบ record, impute, หรือสร้าง missing indicator
 - หากนำไปทำ machine learning ควรกำหนด target variable ให้ชัดเจนก่อน เช่น ทำนายโรค ทำนายการได้รับยา หรือจำแนกกลุ่มความเสี่ยง
 - ระวัง data leakage หากใช้คอลัมน์ยา/diagnosis เป็น feature ในงานที่ target เกี่ยวข้องกับโรคหรือการรักษาโดยตรง

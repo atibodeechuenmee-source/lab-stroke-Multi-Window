@@ -1,6 +1,6 @@
 # EDA Stroke
 
-เอกสารนี้อธิบายขั้นตอนการทำ Exploratory Data Analysis (EDA) ของชุดข้อมูลผู้ป่วย stroke/กลุ่มเสี่ยง stroke ในโปรเจกต์นี้ โดยอ้างอิงจากสคริปต์ `code/preprocess.py` และผลลัพธ์กราฟที่บันทึกไว้ในโฟลเดอร์ `output`
+เอกสารนี้อธิบายขั้นตอนการทำ Exploratory Data Analysis (EDA) ของชุดข้อมูลผู้ป่วย stroke/กลุ่มเสี่ยง stroke ในโปรเจกต์นี้ โดยอ้างอิงจากสคริปต์ `src/preprocess.py` และผลลัพธ์กราฟที่บันทึกไว้ในโฟลเดอร์ `output/eda_output`
 
 ## วัตถุประสงค์ของการทำ EDA
 
@@ -19,7 +19,7 @@
 ไฟล์ข้อมูลหลักคือ:
 
 ```text
-patients_with_tc_hdl_ratio_with_drugflag.xlsx
+data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 ```
 
 ข้อมูลมีจำนวน:
@@ -49,7 +49,7 @@ patients_with_tc_hdl_ratio_with_drugflag.xlsx
 โหลดข้อมูลจากไฟล์ Excel ด้วยคำสั่ง:
 
 ```python
-df = pd.read_excel("patients_with_tc_hdl_ratio_with_drugflag.xlsx")
+df = pd.read_excel("data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx")
 ```
 
 หลังโหลดข้อมูล สคริปต์พิมพ์ข้อมูลเบื้องต้น เช่น:

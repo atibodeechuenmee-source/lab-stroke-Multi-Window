@@ -4,7 +4,7 @@
 
 ## ภาพรวมข้อมูล
 
-- ชื่อไฟล์ข้อมูล: `patients_with_tc_hdl_ratio_with_drugflag.xlsx`
+- ชื่อไฟล์ข้อมูล: `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx`
 - จำนวนแถว: 218,772 records
 - จำนวนคอลัมน์: 30 columns
 - ช่วงวันที่ในข้อมูล: 2014-10-01 ถึง 2024-06-30

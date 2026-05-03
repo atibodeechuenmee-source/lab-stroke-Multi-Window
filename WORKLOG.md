@@ -4,7 +4,7 @@
 
 ## ภาพรวมโปรเจกต์
 
-โปรเจกต์นี้ใช้สำหรับสำรวจและวิเคราะห์ข้อมูลผู้ป่วยจากไฟล์ Excel `patients_with_tc_hdl_ratio_with_drugflag.xlsx` ผ่านสคริปต์ `code/preprocess.py`
+โปรเจกต์นี้ใช้สำหรับสำรวจและวิเคราะห์ข้อมูลผู้ป่วยจากไฟล์ Excel `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx` ผ่านสคริปต์ `src/preprocess.py`
 
 สคริปต์หลักทำงานดังนี้:
 
@@ -15,8 +15,9 @@
 
 ## โครงสร้างไฟล์สำคัญ
 
-- `code/preprocess.py` - สคริปต์หลักสำหรับอ่านข้อมูล วิเคราะห์เบื้องต้น และสร้างกราฟ
-- `patients_with_tc_hdl_ratio_with_drugflag.xlsx` - ไฟล์ข้อมูลต้นทาง
+- `src/preprocess.py` - สคริปต์หลักสำหรับอ่านข้อมูล วิเคราะห์เบื้องต้น และสร้างกราฟ
+- `src/feature_importance.py` - สคริปต์สำหรับ modeling, feature importance, SHAP และ model comparison
+- `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx` - ไฟล์ข้อมูลต้นทาง
 - `output/eda_output/` - โฟลเดอร์เก็บไฟล์กราฟจาก EDA
 - `output/feature_importance_output/` - โฟลเดอร์เก็บผลลัพธ์จาก feature importance
 - `.venv/` - virtual environment สำหรับรัน Python และ dependency ของโปรเจกต์
@@ -26,7 +27,7 @@
 รันจากโฟลเดอร์หลักของโปรเจกต์:
 
 ```powershell
-.\.venv\Scripts\python.exe .\code\preprocess.py
+.\.venv\Scripts\python.exe .\src\preprocess.py
 ```
 
 หลังรันเสร็จ กราฟจะถูกบันทึกไว้ในโฟลเดอร์ `output`
@@ -35,18 +36,28 @@
 
 ### 2026-05-03
 
+ปรับโครงสร้างโปรเจกต์
+
+- สร้างโฟลเดอร์ `data/raw`, `data/interim`, `data/processed`, `src`, `notebooks` และ `tests`
+- ย้ายไฟล์ข้อมูลหลักจาก root ไป `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx`
+- ย้ายสคริปต์จาก `code/` ไป `src/`
+- ย้ายสำเนา Excel ที่เคยอยู่ใน `code/` ไป `data/raw/patients_with_tc_hdl_ratio_with_drugflag_code_copy.xlsx` เพื่อเก็บไว้ก่อน ไม่ลบข้อมูลที่อาจต่างกัน
+- เพิ่ม `src/__init__.py` และ `.gitkeep` สำหรับโฟลเดอร์ว่างที่ต้องการ track
+- ปรับ path ใน `src/preprocess.py` และ `src/feature_importance.py` ให้ชี้ไปที่ `data/raw/`
+- อัปเดต `README.md`, `DATASET.md`, `job/EDA-stroke.md` และ `job/feature-importance-stroke.md` ให้ตรงกับโครงสร้างใหม่
+
 แยกโฟลเดอร์ผลลัพธ์ใน `output`
 
 - สร้าง `output/eda_output` สำหรับผลลัพธ์จาก EDA
 - สร้าง `output/feature_importance_output` สำหรับผลลัพธ์จาก feature importance
-- ปรับ `code/preprocess.py` ให้บันทึกกราฟ EDA ลง `output/eda_output`
-- ปรับ `code/feature_importance.py` ให้บันทึกตาราง กราฟ และ metrics ลง `output/feature_importance_output`
+- ปรับ `src/preprocess.py` ให้บันทึกกราฟ EDA ลง `output/eda_output`
+- ปรับ `src/feature_importance.py` ให้บันทึกตาราง กราฟ และ metrics ลง `output/feature_importance_output`
 - ย้ายไฟล์ output เดิมไปยังโฟลเดอร์ย่อยตามประเภทงาน
 - อัปเดตเอกสารให้ชี้ path output ใหม่
 
 เพิ่มงาน `feature importance`
 
-- เพิ่มสคริปต์ `code/feature_importance.py`
+- เพิ่มสคริปต์ `src/feature_importance.py`
 - สร้าง target `stroke_flag` จากรหัส ICD-10 กลุ่ม `I60-I69*` ใน `PrincipleDiagnosis` เท่านั้น
 - ใช้ Random Forest แบบ class-balanced เพื่อคำนวณ feature importance
 - บันทึกผลลัพธ์เป็น `output/feature_importance_output/feature_importance_stroke.csv`, `output/feature_importance_output/feature_importance_stroke.png` และ `output/feature_importance_output/feature_importance_stroke_metrics.txt`
@@ -58,7 +69,7 @@
 - เพิ่ม XGBoost เพื่อเปรียบเทียบกับ RandomForest
 - ปรับ RandomForest `min_samples_leaf` จาก 20 เป็น 5 เพื่อลด over-smoothing
 - เพิ่มไฟล์ output สำหรับ `model_cv_metrics`, `model_holdout_metrics`, `feature_importance_model_comparison` และ `shap_*`
-- เพิ่มคอมเมนต์และ docstring ภาษาไทยอย่างละเอียดใน `code/feature_importance.py` เพื่ออธิบาย workflow, target, preprocessing, cross-validation, model comparison และ SHAP
+- เพิ่มคอมเมนต์และ docstring ภาษาไทยอย่างละเอียดใน `src/feature_importance.py` เพื่ออธิบาย workflow, target, preprocessing, cross-validation, model comparison และ SHAP
 
 เพิ่มสรุปงานวิจัยในโฟลเดอร์ `paper`
 
@@ -96,10 +107,10 @@
 
 - ใช้เป็นไฟล์อธิบายภาพรวมของโปรเจกต์
 - ระบุว่าโปรเจกต์ทำอะไร ใช้ข้อมูลไฟล์ไหน และสร้างผลลัพธ์อะไร
-- เพิ่มวิธีรันสคริปต์ `code/preprocess.py`
+- เพิ่มวิธีรันสคริปต์ `src/preprocess.py`
 - อธิบายความแตกต่างระหว่าง `README.md` กับ `WORKLOG.md`
 
-ปรับการสร้างกราฟใน `code/preprocess.py`
+ปรับการสร้างกราฟใน `src/preprocess.py`
 
 - เปลี่ยนจากการเรียก `plt.show()` เป็นการบันทึกไฟล์ภาพลงโฟลเดอร์ `output`
 - เพิ่ม helper `save_current_plot()` เพื่อบันทึกกราฟซ้ำ ๆ ด้วยรูปแบบเดียวกัน

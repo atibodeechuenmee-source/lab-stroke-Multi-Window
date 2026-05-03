@@ -1,6 +1,6 @@
 # Feature Importance for Stroke
 
-เอกสารนี้อธิบายการทำ feature importance สำหรับ dataset ผู้ป่วยในโปรเจกต์นี้ โดยใช้สคริปต์ `code/feature_importance.py`
+เอกสารนี้อธิบายการทำ feature importance สำหรับ dataset ผู้ป่วยในโปรเจกต์นี้ โดยใช้สคริปต์ `src/feature_importance.py`
 
 ## วัตถุประสงค์
 

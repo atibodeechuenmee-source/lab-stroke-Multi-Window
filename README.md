@@ -1,88 +1,119 @@
 # Stroke Patient Data Exploration
 
-โปรเจกต์นี้ใช้สำหรับสำรวจข้อมูลผู้ป่วยจากไฟล์ Excel และสร้างกราฟวิเคราะห์ข้อมูลเบื้องต้น เพื่อช่วยดูคุณภาพข้อมูล การกระจายของตัวแปร ความสัมพันธ์ของตัวแปร และค่าผิดปกติ
+โปรเจกต์นี้ใช้สำหรับสำรวจข้อมูลผู้ป่วย วิเคราะห์ EDA และสร้างโมเดลเบื้องต้นสำหรับงาน Stroke prediction จากข้อมูล clinical tabular data
 
 ## โปรเจกต์นี้ทำอะไร
 
-สคริปต์หลักของโปรเจกต์คือ `code/preprocess.py` โดยทำงานดังนี้:
-
-- อ่านข้อมูลจากไฟล์ `patients_with_tc_hdl_ratio_with_drugflag.xlsx`
-- แสดงข้อมูลเบื้องต้น เช่น จำนวนแถว/คอลัมน์, ตัวอย่างข้อมูล, ชนิดข้อมูล และค่าสถิติเบื้องต้น
-- ตรวจสอบ missing values ของแต่ละคอลัมน์
-- สร้างกราฟสำรวจข้อมูล เช่น heatmap, histogram, correlation matrix, boxplot และ pairplot
-- บันทึกกราฟทั้งหมดเป็นไฟล์ `.png` ลงในโฟลเดอร์ `output/eda_output`
+- อ่านข้อมูลผู้ป่วยจากไฟล์ Excel ใน `data/raw/`
+- ทำ EDA เพื่อตรวจสอบ missing values, distribution, correlation และ outliers
+- สร้าง target `stroke_flag` จาก `PrincipleDiagnosis` โดยใช้ ICD-10 ช่วง `I60-I69*`
+- สร้างโมเดล RandomForest และ XGBoost เพื่อเปรียบเทียบผล
+- วิเคราะห์ feature importance และ SHAP explainability
+- บันทึกผลลัพธ์ทั้งหมดไว้ใน `output/`
 
 ## ข้อมูลที่ใช้
 
 ไฟล์ข้อมูลหลัก:
 
 ```text
-patients_with_tc_hdl_ratio_with_drugflag.xlsx
+data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 ```
 
-ข้อมูลมีตัวแปรเกี่ยวกับผู้ป่วย เช่น อายุ เพศ ค่าร่างกาย ผลแล็บ โรคร่วม ยาที่ได้รับ และ flag ที่เกี่ยวข้องกับยา/โรคบางกลุ่ม
+หมายเหตุ: มีไฟล์ `data/raw/patients_with_tc_hdl_ratio_with_drugflag_code_copy.xlsx` เป็นสำเนาที่เคยอยู่ในโฟลเดอร์ `code/` จึงเก็บแยกไว้ก่อนเพื่อไม่ลบข้อมูลที่อาจต่างกัน
 
-## ผลลัพธ์ที่ได้
+## วิธีรัน
 
-หลังรันสคริปต์ จะได้ไฟล์กราฟในโฟลเดอร์:
-
-```text
-output/eda_output/
-```
-
-ตัวอย่างไฟล์ผลลัพธ์:
-
-- `missing_values_heatmap.png`
-- `feature_distributions.png`
-- `correlation_matrix.png`
-- `pairplot.png`
-- `boxplot_*.png`
-
-## วิธีรันโปรเจกต์
-
-รันคำสั่งนี้จากโฟลเดอร์หลักของโปรเจกต์:
-
-```powershell
-.\.venv\Scripts\python.exe .\code\preprocess.py
-```
-
-ถ้าต้องติดตั้ง dependency ใหม่ ให้ใช้:
+ติดตั้ง dependency:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
+รัน EDA:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\preprocess.py
+```
+
+รัน feature importance / modeling / SHAP:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\feature_importance.py
+```
+
+## Output
+
+ผลลัพธ์ถูกแยกตามประเภทงาน:
+
+```text
+output/
+├── eda_output/
+└── feature_importance_output/
+```
+
+ตัวอย่างไฟล์ EDA:
+
+- `output/eda_output/missing_values_heatmap.png`
+- `output/eda_output/feature_distributions.png`
+- `output/eda_output/correlation_matrix.png`
+- `output/eda_output/pairplot.png`
+- `output/eda_output/boxplot_*.png`
+
+ตัวอย่างไฟล์ modeling / explainability:
+
+- `output/feature_importance_output/feature_importance_stroke.csv`
+- `output/feature_importance_output/feature_importance_model_comparison.png`
+- `output/feature_importance_output/model_cv_metrics.csv`
+- `output/feature_importance_output/model_holdout_metrics.csv`
+- `output/feature_importance_output/shap_summary_random_forest.png`
+- `output/feature_importance_output/shap_local_positive_random_forest.png`
+
 ## โครงสร้างโปรเจกต์
 
 ```text
 .
-├── code/
+├── data/
+│   ├── raw/
+│   ├── interim/
+│   └── processed/
+├── src/
+│   ├── __init__.py
 │   ├── preprocess.py
 │   └── feature_importance.py
-├── job/
-│   ├── EDA-stroke.md
-│   └── feature-importance-stroke.md
+├── notebooks/
 ├── output/
 │   ├── eda_output/
 │   └── feature_importance_output/
+├── job/
+│   ├── EDA-stroke.md
+│   └── feature-importance-stroke.md
 ├── paper/
 │   ├── README.md
-│   └── TEMPLATE.md
-├── patients_with_tc_hdl_ratio_with_drugflag.xlsx
+│   ├── TEMPLATE.md
+│   └── stroke-prediction-hypertensive-patients-2021.md
+├── tests/
+├── DATASET.md
 ├── README.md
 ├── requirements.txt
 └── WORKLOG.md
 ```
 
+## บทบาทของแต่ละโฟลเดอร์
+
+- `data/raw/` - ข้อมูลต้นฉบับที่ไม่ควรแก้โดยตรง
+- `data/interim/` - ข้อมูลที่ผ่านการแปลงหรือ cleaning บางส่วน
+- `data/processed/` - ข้อมูลพร้อมใช้สำหรับ modeling
+- `src/` - source code หลักที่รันซ้ำได้
+- `notebooks/` - notebook สำหรับทดลองหรือสำรวจไอเดีย
+- `output/` - กราฟ ตาราง metrics และผลลัพธ์จากสคริปต์
+- `job/` - เอกสารอธิบายงานที่ทำ เช่น EDA และ feature importance
+- `paper/` - สรุปงานวิจัยและลิงก์อ้างอิง
+- `tests/` - พื้นที่สำหรับ unit tests หรือ validation scripts
+
 ## ไฟล์เอกสาร
 
-- `README.md` - อธิบายว่าโปรเจกต์นี้คืออะไร ทำอะไร ใช้งานอย่างไร และได้ผลลัพธ์อะไร
 - `DATASET.md` - อธิบาย dataset, data dictionary, missing values และข้อสังเกตจาก EDA
-- `job/EDA-stroke.md` - อธิบายขั้นตอนการทำ EDA และผลลัพธ์จากกราฟที่สร้าง
-- `job/feature-importance-stroke.md` - อธิบายการทำ feature importance สำหรับ stroke target
-- `paper/` - เก็บสรุปงานวิจัยที่อ่าน พร้อมลิงก์อ้างอิงและ template สำหรับสรุป paper
-- `WORKLOG.md` - บันทึกประวัติการแก้ไขและคำอธิบายงานที่อัปเดตในแต่ละครั้ง
-
-## หมายเหตุ
-
-กราฟถูกบันทึกเป็นไฟล์แทนการแสดงผลบนหน้าจอ เพื่อให้รันสคริปต์ซ้ำได้สะดวก และเก็บผลลัพธ์ไว้ตรวจสอบย้อนหลังได้ในโฟลเดอร์ `output`
+- `job/EDA-stroke.md` - อธิบายขั้นตอนการทำ EDA
+- `job/feature-importance-stroke.md` - อธิบาย feature importance, model comparison และ SHAP
+- `paper/` - เก็บสรุปงานวิจัยที่อ่าน
+- `WORKLOG.md` - บันทึกประวัติการอัปเดตงาน

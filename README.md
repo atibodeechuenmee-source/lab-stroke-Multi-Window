@@ -52,6 +52,8 @@ output/
 .
 ├── code/
 │   └── preprocess.py
+├── job/
+│   └── EDA-stroke.md
 ├── output/
 ├── patients_with_tc_hdl_ratio_with_drugflag.xlsx
 ├── README.md
@@ -62,6 +64,7 @@ output/
 
 - `README.md` - อธิบายว่าโปรเจกต์นี้คืออะไร ทำอะไร ใช้งานอย่างไร และได้ผลลัพธ์อะไร
 - `DATASET.md` - อธิบาย dataset, data dictionary, missing values และข้อสังเกตจาก EDA
+- `job/EDA-stroke.md` - อธิบายขั้นตอนการทำ EDA และผลลัพธ์จากกราฟที่สร้าง
 - `WORKLOG.md` - บันทึกประวัติการแก้ไขและคำอธิบายงานที่อัปเดตในแต่ละครั้ง
 
 ## หมายเหตุ

@@ -55,6 +55,9 @@ output/
 ├── job/
 │   └── EDA-stroke.md
 ├── output/
+├── paper/
+│   ├── README.md
+│   └── TEMPLATE.md
 ├── patients_with_tc_hdl_ratio_with_drugflag.xlsx
 ├── README.md
 └── WORKLOG.md
@@ -65,6 +68,7 @@ output/
 - `README.md` - อธิบายว่าโปรเจกต์นี้คืออะไร ทำอะไร ใช้งานอย่างไร และได้ผลลัพธ์อะไร
 - `DATASET.md` - อธิบาย dataset, data dictionary, missing values และข้อสังเกตจาก EDA
 - `job/EDA-stroke.md` - อธิบายขั้นตอนการทำ EDA และผลลัพธ์จากกราฟที่สร้าง
+- `paper/` - เก็บสรุปงานวิจัยที่อ่าน พร้อมลิงก์อ้างอิงและ template สำหรับสรุป paper
 - `WORKLOG.md` - บันทึกประวัติการแก้ไขและคำอธิบายงานที่อัปเดตในแต่ละครั้ง
 
 ## หมายเหตุ

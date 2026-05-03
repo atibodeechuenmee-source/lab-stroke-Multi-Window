@@ -34,6 +34,21 @@
 
 ### 2026-05-03
 
+เพิ่มสรุปงานวิจัยในโฟลเดอร์ `paper`
+
+- อ่านและสรุป paper เรื่องการทำนาย stroke ในผู้ป่วย hypertension ด้วย medical big data และ machine learning
+- เพิ่มไฟล์ `paper/stroke-prediction-hypertensive-patients-2021.md`
+- เพิ่มลิงก์อ้างอิง paper, PubMed และ DOI
+- สรุป dataset, target, features, methods, metrics, results, limitations และสิ่งที่นำมาใช้กับโปรเจกต์ของเราได้
+- อัปเดตรายการ paper ใน `paper/README.md`
+
+เพิ่มโฟลเดอร์ `paper`
+
+- ใช้เก็บสรุปงานวิจัยที่อ่านและเกี่ยวข้องกับโปรเจกต์
+- เพิ่ม `paper/README.md` เพื่ออธิบายวิธีจัดเก็บและรายการ paper ที่สรุปแล้ว
+- เพิ่ม `paper/TEMPLATE.md` เป็น template สำหรับสรุป paper แต่ละเรื่อง
+- กำหนดให้แต่ละสรุปต้องมีลิงก์อ้างอิง เช่น DOI, URL ของ paper, dataset หรือ code ถ้ามี
+
 เพิ่มไฟล์ `job/EDA-stroke.md`
 
 - สร้างโฟลเดอร์ `job` สำหรับเก็บเอกสารงานเฉพาะหัวข้อ

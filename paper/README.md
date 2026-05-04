@@ -1,5 +1,10 @@
 # Paper Notes
 
+## รายการสรุปงานวิจัยเพิ่มเติม
+
+- [Machine Learning-Based Prediction of Stroke in Emergency Departments](stroke-ed-ml-prediction-2024.md) - งานวิจัยปี 2024 เรื่องการใช้ structured/unstructured EHR และ machine learning เพื่อช่วยทำนาย ischemic stroke ใน emergency department
+- [Stroke recurrence prediction using machine learning and segmented neural network risk factor aggregation](stroke-recurrence-sna-2024.md) - งานวิจัยปี 2024 เรื่องการทำนาย stroke recurrence จาก EHR/ICD-10 ด้วยการรวม risk factors และ machine learning
+
 โฟลเดอร์นี้ใช้เก็บสรุปงานวิจัยที่เกี่ยวข้องกับโปรเจกต์ stroke และการวิเคราะห์ข้อมูลผู้ป่วย โดยแต่ละงานวิจัยควรมีลิงก์อ้างอิงชัดเจน เพื่อให้ย้อนกลับไปอ่านต้นฉบับได้
 
 ## วิธีใช้โฟลเดอร์นี้

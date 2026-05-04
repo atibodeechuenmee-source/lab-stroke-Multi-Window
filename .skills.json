@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "skills": {
+    "code-review": {
+      "version": "1.0.0",
+      "installedAt": "2026-05-04T01:05:49.717Z",
+      "platform": "codex"
+    },
+    "research-paper-pipeline": {
+      "version": "1.0.0",
+      "installedAt": "2026-05-04T02:25:44.657Z",
+      "platform": "claude-code"
+    },
+    "ai-research-brainstorming-research-ideas": {
+      "version": "latest",
+      "installedAt": "2026-05-04T02:25:44.666Z",
+      "platform": "claude-code"
+    },
+    "ai-research-creative-thinking-for-research": {
+      "version": "latest",
+      "installedAt": "2026-05-04T02:25:44.674Z",
+      "platform": "claude-code"
+    },
+    "ai-research-ml-paper-writing": {
+      "version": "latest",
+      "installedAt": "2026-05-04T02:25:44.681Z",
+      "platform": "claude-code"
+    },
+    "research-skills-research-proposal": {
+      "version": "latest",
+      "installedAt": "2026-05-04T02:25:44.689Z",
+      "platform": "claude-code"
+    },
+    "research-skills-paper-slide-deck": {
+      "version": "latest",
+      "installedAt": "2026-05-04T02:25:44.696Z",
+      "platform": "claude-code"
+    },
+    "anthropic-pptx": {
+      "version": "latest",
+      "installedAt": "2026-05-04T02:25:44.704Z",
+      "platform": "claude-code"
+    }
+  }
+}

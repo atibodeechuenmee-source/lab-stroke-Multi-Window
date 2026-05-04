@@ -1,5 +1,37 @@
 # Worklog
 
+เพิ่มไฟล์ PowerPoint สำหรับนำเสนอ
+
+- ติดตั้ง dependency `python-pptx`
+- เพิ่ม `python-pptx` ใน `requirements.txt`
+- สร้างสคริปต์ `presentation/build_pptx.py` สำหรับ generate ไฟล์ PowerPoint จากเนื้อหาโปรเจกต์
+- สคริปต์ออกแบบสไลด์แบบ 16:9 พร้อมหัวข้อ bullet, metric cards, ตาราง metrics และกราฟสำคัญจาก `output/`
+- ตั้ง output เป็น `presentation/exports/stroke_prediction_presentation.pptx`
+
+เพิ่มชุดเอกสารสำหรับนำเสนอโปรเจกต์
+
+- สร้าง `presentation/slides.md` เป็นสไลด์สรุปงานทั้งหมดตั้งแต่ dataset, EDA, target, feature importance, SHAP, patient-level prediction, paper review, limitations และ next steps
+- สร้าง `presentation/speaker-script.md` เป็นสคริปต์พูดให้อาจารย์ฟังแบบแยกตามสไลด์
+- สร้าง `presentation/asset-map.md` เพื่อ map สไลด์กับไฟล์กราฟ ตาราง metrics และเอกสารที่ควรเปิดประกอบ
+- สร้าง `presentation/presentation-checklist.md` สำหรับเตรียมก่อนนำเสนอและคำถามที่อาจารย์อาจถาม
+- เพิ่มโฟลเดอร์ย่อย `presentation/slides`, `presentation/assets`, `presentation/exports`
+
+เพิ่มสรุปงานวิจัย stroke recurrence ปี 2024
+
+- อ่านและสรุป paper `Stroke recurrence prediction using machine learning and segmented neural network risk factor aggregation`
+- เพิ่มไฟล์ `paper/stroke-recurrence-sna-2024.md`
+- สรุปการใช้ TriNetX EHR, ICD-10 diagnosis, target stroke recurrence ภายใน 30 วัน, aggregation methods, SNA, Logistic Regression, Random Forest, ROC-AUC และ PR-AUC
+- บันทึกแนวทางนำไปใช้กับโปรเจกต์ เช่น ICD-10 risk factor aggregation, previous stroke/TIA features, PR-AUC และการลด data leakage จาก patient-event timeline
+- อัปเดตรายการ paper ใน `paper/README.md`
+
+เพิ่มสรุปงานวิจัย stroke ปี 2024
+
+- อ่านและสรุป paper `Machine Learning-Based Prediction of Stroke in Emergency Departments`
+- เพิ่มไฟล์ `paper/stroke-ed-ml-prediction-2024.md`
+- สรุป dataset จาก EHR 13 โรงพยาบาล, target ischemic stroke, structured/unstructured features, model, metrics, results, limitations และแนวทางนำมาใช้กับโปรเจกต์
+- บันทึกข้อสังเกตว่า paper Scientific Reports บางงานปี 2024 ที่ค้นเจอถูก retracted ในปี 2026 จึงไม่เลือกใช้เป็นแหล่งอ้างอิงหลัก
+- อัปเดตรายการ paper ใน `paper/README.md`
+
 ไฟล์นี้ใช้บันทึกและอธิบายงานที่ทำในโปรเจกต์นี้ เมื่อมีการอัปเดตโค้ดหรือเปลี่ยนขั้นตอนการทำงาน ให้เพิ่มรายละเอียดต่อท้ายในส่วน "ประวัติการอัปเดต"
 
 ## ภาพรวมโปรเจกต์

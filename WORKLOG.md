@@ -36,6 +36,20 @@
 
 ### 2026-05-03
 
+เพิ่ม patient-level 3-month stroke prediction
+
+- เพิ่ม `src/patient_level_prediction.py`
+- สร้าง cohort ระดับผู้ป่วยโดยใช้ `hn` และ timeline จาก `vstdate`
+- สร้าง target `stroke_3m` จาก `PrincipleDiagnosis` ICD-10 `I60-I69*` ภายใน 90 วันหลัง index date
+- สร้าง processed dataset ที่ `data/processed/patient_level_90d_stroke.csv`
+- เปรียบเทียบ Logistic Regression, RandomForest และ XGBoost
+- เพิ่ม Stratified K-Fold CV, holdout metrics, confusion matrix, feature importance และ SHAP
+- บันทึกผลลัพธ์ไว้ที่ `output/model_output`
+- เพิ่มเอกสาร `job/patient-level-3month-stroke-prediction.md`
+- รัน workflow สำเร็จ ได้ processed cohort 13,031 rows, positive 406 rows, prevalence 3.12%
+- ผล holdout ล่าสุด: XGBoost ดีที่สุดด้วย ROC-AUC 0.8390 และ PR-AUC 0.1650
+- บันทึกข้อสังเกตว่า RandomForest ที่ threshold 0.5 ไม่ทำนาย positive class จึงควรเพิ่ม threshold tuning/calibration ในรอบถัดไป
+
 ปรับโครงสร้างโปรเจกต์
 
 - สร้างโฟลเดอร์ `data/raw`, `data/interim`, `data/processed`, `src`, `notebooks` และ `tests`

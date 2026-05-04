@@ -41,6 +41,12 @@ data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 .\.venv\Scripts\python.exe .\src\feature_importance.py
 ```
 
+รัน patient-level 3-month stroke prediction:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\patient_level_prediction.py
+```
+
 ## Output
 
 ผลลัพธ์ถูกแยกตามประเภทงาน:
@@ -48,7 +54,8 @@ data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 ```text
 output/
 ├── eda_output/
-└── feature_importance_output/
+├── feature_importance_output/
+└── model_output/
 ```
 
 ตัวอย่างไฟล์ EDA:
@@ -68,6 +75,13 @@ output/
 - `output/feature_importance_output/shap_summary_random_forest.png`
 - `output/feature_importance_output/shap_local_positive_random_forest.png`
 
+ตัวอย่างไฟล์ patient-level prediction:
+
+- `data/processed/patient_level_90d_stroke.csv`
+- `output/model_output/patient_level_90d_model_report.txt`
+- `output/model_output/patient_level_90d_holdout_metrics.csv`
+- `output/model_output/patient_level_90d_shap_summary_*.png`
+
 ## โครงสร้างโปรเจกต์
 
 ```text
@@ -79,14 +93,17 @@ output/
 ├── src/
 │   ├── __init__.py
 │   ├── preprocess.py
-│   └── feature_importance.py
+│   ├── feature_importance.py
+│   └── patient_level_prediction.py
 ├── notebooks/
 ├── output/
 │   ├── eda_output/
-│   └── feature_importance_output/
+│   ├── feature_importance_output/
+│   └── model_output/
 ├── job/
 │   ├── EDA-stroke.md
-│   └── feature-importance-stroke.md
+│   ├── feature-importance-stroke.md
+│   └── patient-level-3month-stroke-prediction.md
 ├── paper/
 │   ├── README.md
 │   ├── TEMPLATE.md
@@ -115,5 +132,6 @@ output/
 - `DATASET.md` - อธิบาย dataset, data dictionary, missing values และข้อสังเกตจาก EDA
 - `job/EDA-stroke.md` - อธิบายขั้นตอนการทำ EDA
 - `job/feature-importance-stroke.md` - อธิบาย feature importance, model comparison และ SHAP
+- `job/patient-level-3month-stroke-prediction.md` - อธิบาย cohort และโมเดล patient-level 90-day prediction
 - `paper/` - เก็บสรุปงานวิจัยที่อ่าน
 - `WORKLOG.md` - บันทึกประวัติการอัปเดตงาน

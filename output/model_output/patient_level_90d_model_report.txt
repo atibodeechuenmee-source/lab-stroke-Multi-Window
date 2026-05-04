@@ -1,0 +1,66 @@
+Patient-Level 90-Day Stroke Prediction Report
+=============================================
+
+Target: stroke within 90 days after index date based on PrincipleDiagnosis I60-I69*
+Rows: 13,031
+Positive: 406
+Negative: 12,625
+Prevalence: 3.12%
+Best SHAP model: xgboost
+
+CV Summary
+----------
+              model  roc_auc_mean  roc_auc_std  pr_auc_mean  pr_auc_std  precision_mean  precision_std  recall_mean  recall_std  f1_mean   f1_std
+logistic_regression      0.755869     0.020670     0.115832    0.024047        0.075186       0.003499     0.650316    0.022553 0.134764 0.005789
+      random_forest      0.765919     0.025085     0.122866    0.016334        0.000000       0.000000     0.000000    0.000000 0.000000 0.000000
+            xgboost      0.791333     0.022477     0.140926    0.021365        0.097137       0.007037     0.547034    0.055911 0.164891 0.012171
+
+Holdout Metrics
+---------------
+              model  roc_auc   pr_auc  accuracy  precision   recall       f1
+            xgboost 0.838987 0.164977  0.844997   0.124767 0.656863 0.209703
+      random_forest 0.797948 0.155532  0.968692   0.000000 0.000000 0.000000
+logistic_regression 0.778682 0.111823  0.743708   0.078251 0.666667 0.140062
+
+Confusion Matrix: logistic_regression
+[[2355  801]
+ [  34   68]]
+
+              precision    recall  f1-score   support
+
+           0     0.9858    0.7462    0.8494      3156
+           1     0.0783    0.6667    0.1401       102
+
+    accuracy                         0.7437      3258
+   macro avg     0.5320    0.7064    0.4947      3258
+weighted avg     0.9574    0.7437    0.8272      3258
+
+
+Confusion Matrix: random_forest
+[[3156    0]
+ [ 102    0]]
+
+              precision    recall  f1-score   support
+
+           0     0.9687    1.0000    0.9841      3156
+           1     0.0000    0.0000    0.0000       102
+
+    accuracy                         0.9687      3258
+   macro avg     0.4843    0.5000    0.4920      3258
+weighted avg     0.9384    0.9687    0.9533      3258
+
+
+Confusion Matrix: xgboost
+[[2686  470]
+ [  35   67]]
+
+              precision    recall  f1-score   support
+
+           0     0.9871    0.8511    0.9141      3156
+           1     0.1248    0.6569    0.2097       102
+
+    accuracy                         0.8450      3258
+   macro avg     0.5560    0.7540    0.5619      3258
+weighted avg     0.9601    0.8450    0.8920      3258
+
+

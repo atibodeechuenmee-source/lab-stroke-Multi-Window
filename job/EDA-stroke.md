@@ -1,6 +1,6 @@
 # EDA Stroke
 
-เอกสารนี้อธิบายขั้นตอนการทำ Exploratory Data Analysis (EDA) ของชุดข้อมูลผู้ป่วย stroke/กลุ่มเสี่ยง stroke ในโปรเจกต์นี้ โดยอ้างอิงจากสคริปต์ `src/preprocess.py` และผลลัพธ์กราฟที่บันทึกไว้ในโฟลเดอร์ `output/eda_output`
+เอกสารนี้อธิบายขั้นตอนการทำ Exploratory Data Analysis (EDA) ของชุดข้อมูลผู้ป่วย stroke/กลุ่มเสี่ยง stroke ในโปรเจกต์นี้ โดยอ้างอิงจากสคริปต์ `src/eda.py` และผลลัพธ์กราฟที่บันทึกไว้ในโฟลเดอร์ `output/eda_output`
 
 ## วัตถุประสงค์ของการทำ EDA
 

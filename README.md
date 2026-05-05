@@ -32,7 +32,7 @@ data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 รัน EDA:
 
 ```powershell
-.\.venv\Scripts\python.exe .\src\preprocess.py
+.\.venv\Scripts\python.exe .\src\eda.py
 ```
 
 รัน feature importance / modeling / SHAP:
@@ -92,7 +92,7 @@ output/
 │   └── processed/
 ├── src/
 │   ├── __init__.py
-│   ├── preprocess.py
+│   ├── eda.py
 │   ├── feature_importance.py
 │   └── patient_level_prediction.py
 ├── notebooks/

@@ -79,6 +79,26 @@
 - patient-level 90-day stroke prevalence: 3.12%
 - excluded patients: 604, reason `positive_outside_horizon`
 
+### `src/feature_engineering.py`
+
+สร้างจาก `docs/pipeline/05-feature-engineering.md`:
+
+- ใช้ cleaned dataset จาก `data/interim/cleaned_stroke_records.csv`
+- สร้าง patient-level feature table สำหรับ target `stroke_3m`
+- ใช้ข้อมูลก่อนหรือ ณ `index_date` เท่านั้น
+- สร้าง latest features, temporal summary, missing-rate features, history features และ date features
+- ไม่ใช้ diagnosis/text leakage columns เป็น model features
+- บันทึก feature table ลง `data/processed/patient_level_90d_stroke.csv`
+- บันทึก feature list, log, exclusions และ report ลง `output/feature_engineering_output/`
+
+ผลรันล่าสุด:
+
+- patient rows: 13,031
+- positive `stroke_3m`: 406
+- negative: 12,625
+- prevalence: 3.12%
+- model features: 88
+
 ## Outputs
 
 เพิ่ม output ใหม่:
@@ -93,6 +113,11 @@
 - `output/target_cohort_output/patient_level_90d_exclusions.csv`
 - `output/target_cohort_output/target_cohort_summary.json`
 - `output/target_cohort_output/target_cohort_report.md`
+- `output/feature_engineering_output/feature_list.csv`
+- `output/feature_engineering_output/feature_generation_log.csv`
+- `output/feature_engineering_output/feature_engineering_report.json`
+- `output/feature_engineering_output/feature_engineering_report.md`
+- `output/feature_engineering_output/feature_engineering_exclusions.csv`
 - `output/pipeline_runs/pipeline_manifest_*.json`
 
 ## Validation Commands
@@ -104,10 +129,12 @@
 .\.venv\Scripts\python.exe .\src\pipeline_overview.py --dry-run
 .\.venv\Scripts\python.exe .\src\pipeline_overview.py --stage raw-data
 .\.venv\Scripts\python.exe .\src\pipeline_overview.py --stage target-and-cohort
+.\.venv\Scripts\python.exe .\src\pipeline_overview.py --stage feature-engineering
 ```
 
 ## Notes
 
-- ขั้น `data-cleaning` และ `deployment-optional` ยังเป็นแผน ยังไม่มี production script
+- ขั้น `deployment-optional` ยังเป็นแผน ยังไม่มี production script
 - `target-and-cohort` stage แยกออกจาก `patient_level_prediction.py` เพื่อทำเฉพาะนิยาม target/cohort โดยไม่ train model
+- `feature-engineering` stage แยกออกจาก `patient_level_prediction.py` เพื่อสร้าง feature table โดยไม่ train model
 - `PrincipleDiagnosis` ใช้สร้าง target เท่านั้น และไม่ควรถูกใช้เป็น feature ของโมเดล

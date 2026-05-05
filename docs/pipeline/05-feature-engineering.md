@@ -9,6 +9,7 @@
 - Cleaned dataset
 - Target/cohort definition
 - `hn`, `vstdate`, demographic, vitals, labs, comorbidity flags, medication flags
+- Implementation script: `src/feature_engineering.py`
 
 ## Steps
 
@@ -25,6 +26,8 @@
 - Feature list พร้อมคำอธิบาย
 - Feature generation log
 - Missing indicator และ missing-rate features ตามที่กำหนด
+- Output หลัก: `data/processed/patient_level_90d_stroke.csv`
+- Report: `output/feature_engineering_output/feature_engineering_report.md`
 
 ## Checks
 

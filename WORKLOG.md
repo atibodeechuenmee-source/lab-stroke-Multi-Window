@@ -2,6 +2,25 @@
 
 ## 2026-05-05
 
+เพิ่ม feature engineering stage แยกจาก modeling
+
+- เพิ่ม `src/feature_engineering.py` จากแผน `docs/pipeline/05-feature-engineering.md`
+- ปรับ `src/pipeline_overview.py` ให้ stage `feature-engineering` รัน `src/feature_engineering.py` แทนการรัน modeling script
+- ใช้ cleaned dataset `data/interim/cleaned_stroke_records.csv` เพื่อสร้าง patient-level feature table
+- สร้าง output หลัก `data/processed/patient_level_90d_stroke.csv`
+- เพิ่ม output รายงานใน `output/feature_engineering_output/` ได้แก่ feature list, generation log, exclusions และ report
+- รัน `pipeline_overview.py --stage feature-engineering` สำเร็จ
+
+ผลลัพธ์ล่าสุด:
+
+- patient rows: 13,031
+- positive `stroke_3m`: 406
+- negative: 12,625
+- prevalence: 3.12%
+- model features: 88
+
+## 2026-05-05
+
 เพิ่ม pipeline planning และ implementation ขั้นต้น
 
 - เพิ่มเอกสารแผน pipeline รายขั้นใน `docs/pipeline/` ตั้งแต่ `00-pipeline-overview.md` ถึง `09-deployment-optional.md`

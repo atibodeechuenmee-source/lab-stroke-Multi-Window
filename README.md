@@ -48,6 +48,19 @@ data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 .\.venv\Scripts\python.exe .\src\patient_level_prediction.py
 ```
 
+รัน feature engineering แยกเฉพาะขั้น:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\feature_engineering.py
+```
+
+รัน pipeline stage รวม:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\pipeline_overview.py --dry-run
+.\.venv\Scripts\python.exe .\src\pipeline_overview.py --stage feature-engineering
+```
+
 ## Output
 
 ผลลัพธ์ถูกแยกตามประเภทงาน:
@@ -56,6 +69,7 @@ data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx
 output/
 ├── eda_output/
 ├── feature_importance_output/
+├── feature_engineering_output/
 └── model_output/
 ```
 
@@ -70,6 +84,8 @@ output/
 ตัวอย่างไฟล์ patient-level modeling / explainability:
 
 - `data/processed/patient_level_90d_stroke.csv`
+- `output/feature_engineering_output/feature_list.csv`
+- `output/feature_engineering_output/feature_engineering_report.md`
 - `output/model_output/patient_level_90d_model_report.txt`
 - `output/model_output/patient_level_90d_holdout_metrics.csv`
 - `output/model_output/patient_level_90d_feature_importance_comparison.csv`
@@ -87,11 +103,14 @@ output/
 ├── src/
 │   ├── __init__.py
 │   ├── eda.py
+│   ├── feature_engineering.py
 │   ├── feature_importance.py
+│   ├── pipeline_overview.py
 │   └── patient_level_prediction.py
 ├── notebooks/
 ├── output/
 │   ├── eda_output/
+│   ├── feature_engineering_output/
 │   ├── feature_importance_output/
 │   └── model_output/
 ├── job/

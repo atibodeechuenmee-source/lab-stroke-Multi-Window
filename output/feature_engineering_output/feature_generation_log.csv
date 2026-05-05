@@ -1,0 +1,4 @@
+﻿step,detail,row_count
+load_source_data,Loaded data\interim\cleaned_stroke_records.csv,
+build_patient_level_feature_table,Aggregated history at or before index_date only.,13031.0
+exclude_leakage_columns,none present,

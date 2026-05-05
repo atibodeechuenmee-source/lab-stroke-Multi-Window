@@ -99,11 +99,16 @@ STAGES: tuple[PipelineStage, ...] = (
         name="Feature Engineering",
         doc_path=Path("docs/pipeline/05-feature-engineering.md"),
         inputs=(
-            Path("data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx"),
-            Path("src/patient_level_prediction.py"),
+            Path("data/interim/cleaned_stroke_records.csv"),
+            Path("src/feature_engineering.py"),
         ),
-        outputs=(Path("data/processed/patient_level_90d_stroke.csv"),),
-        command=(sys.executable, "src/patient_level_prediction.py"),
+        outputs=(
+            Path("data/processed/patient_level_90d_stroke.csv"),
+            Path("output/feature_engineering_output/feature_list.csv"),
+            Path("output/feature_engineering_output/feature_generation_log.csv"),
+            Path("output/feature_engineering_output/feature_engineering_report.json"),
+        ),
+        command=(sys.executable, "src/feature_engineering.py"),
     ),
     PipelineStage(
         order=6,

@@ -1,0 +1,49 @@
+{
+  "run_at": "2026-05-05T15:03:53",
+  "dry_run": false,
+  "overview_doc": "docs/pipeline/00-pipeline-overview.md",
+  "records": [
+    {
+      "order": 5,
+      "key": "feature-engineering",
+      "name": "Feature Engineering",
+      "status": "passed",
+      "message": "Command completed and expected outputs exist.",
+      "doc": "docs\\pipeline\\05-feature-engineering.md",
+      "inputs": [
+        {
+          "path": "data\\interim\\cleaned_stroke_records.csv",
+          "exists": true
+        },
+        {
+          "path": "src\\feature_engineering.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data\\processed\\patient_level_90d_stroke.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\feature_engineering_output\\feature_list.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\feature_engineering_output\\feature_generation_log.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\feature_engineering_output\\feature_engineering_report.json",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/feature_engineering.py"
+      ],
+      "stdout_tail": "Feature engineering completed\nFeature table: data\\processed\\patient_level_90d_stroke.csv\nPatient rows: 13,031\nPositive patients: 406\nModel features: 88\nOutput directory: output\\feature_engineering_output\n",
+      "stderr_tail": ""
+    }
+  ]
+}

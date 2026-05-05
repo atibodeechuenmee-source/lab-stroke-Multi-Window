@@ -1,0 +1,94 @@
+﻿column,feature_type,is_model_feature,missing_count,missing_percent,description
+hn,target_or_identifier,False,0,0.0,"Identifier, index metadata, or target."
+index_date,target_or_identifier,False,0,0.0,"Identifier, index metadata, or target."
+event_date,target_or_identifier,False,12625,96.88,"Identifier, index metadata, or target."
+days_to_event,target_or_identifier,False,12625,96.88,"Identifier, index metadata, or target."
+stroke_3m,target_or_identifier,False,0,0.0,"Identifier, index metadata, or target."
+history_visit_count,history,True,0,0.0,Patient history size before or at index date.
+history_days_observed,history,True,0,0.0,Patient history size before or at index date.
+index_year,date,True,0,0.0,Calendar feature from index date.
+index_month,date,True,0,0.0,Calendar feature from index date.
+sex_latest,latest,True,0,0.0,Latest observed value before or at index date.
+age_latest,latest,True,0,0.0,Latest observed value before or at index date.
+height_latest,latest,True,34,0.26,Latest observed value before or at index date.
+bw_latest,latest,True,27,0.21,Latest observed value before or at index date.
+bmi_latest,latest,True,54,0.41,Latest observed value before or at index date.
+smoke_latest,latest,True,0,0.0,Latest observed value before or at index date.
+drinking_latest,latest,True,0,0.0,Latest observed value before or at index date.
+AF_latest,latest,True,0,0.0,Latest observed value before or at index date.
+heart_disease_latest,latest,True,0,0.0,Latest observed value before or at index date.
+hypertension_latest,latest,True,0,0.0,Latest observed value before or at index date.
+diabetes_latest,latest,True,0,0.0,Latest observed value before or at index date.
+Statin_latest,latest,True,0,0.0,Latest observed value before or at index date.
+Gemfibrozil_latest,latest,True,0,0.0,Latest observed value before or at index date.
+Antihypertensive_flag_latest,latest,True,0,0.0,Latest observed value before or at index date.
+bps_latest,latest,True,1158,8.89,Latest observed value before or at index date.
+bps_mean,temporal_summary,True,462,3.55,Mean of historical values before or at index date.
+bps_min,temporal_summary,True,462,3.55,Minimum historical value before or at index date.
+bps_max,temporal_summary,True,462,3.55,Maximum historical value before or at index date.
+bps_std,temporal_summary,True,1097,8.42,Standard deviation of historical values before or at index date.
+bps_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+bps_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+bpd_latest,latest,True,1160,8.9,Latest observed value before or at index date.
+bpd_mean,temporal_summary,True,461,3.54,Mean of historical values before or at index date.
+bpd_min,temporal_summary,True,461,3.54,Minimum historical value before or at index date.
+bpd_max,temporal_summary,True,461,3.54,Maximum historical value before or at index date.
+bpd_std,temporal_summary,True,1092,8.38,Standard deviation of historical values before or at index date.
+bpd_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+bpd_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+HDL_latest,latest,True,7200,55.25,Latest observed value before or at index date.
+HDL_mean,temporal_summary,True,858,6.58,Mean of historical values before or at index date.
+HDL_min,temporal_summary,True,858,6.58,Minimum historical value before or at index date.
+HDL_max,temporal_summary,True,858,6.58,Maximum historical value before or at index date.
+HDL_std,temporal_summary,True,2602,19.97,Standard deviation of historical values before or at index date.
+HDL_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+HDL_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+LDL_latest,latest,True,7271,55.8,Latest observed value before or at index date.
+LDL_mean,temporal_summary,True,887,6.81,Mean of historical values before or at index date.
+LDL_min,temporal_summary,True,887,6.81,Minimum historical value before or at index date.
+LDL_max,temporal_summary,True,887,6.81,Maximum historical value before or at index date.
+LDL_std,temporal_summary,True,2672,20.5,Standard deviation of historical values before or at index date.
+LDL_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+LDL_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+Triglyceride_latest,latest,True,7470,57.32,Latest observed value before or at index date.
+Triglyceride_mean,temporal_summary,True,1001,7.68,Mean of historical values before or at index date.
+Triglyceride_min,temporal_summary,True,1001,7.68,Minimum historical value before or at index date.
+Triglyceride_max,temporal_summary,True,1001,7.68,Maximum historical value before or at index date.
+Triglyceride_std,temporal_summary,True,2836,21.76,Standard deviation of historical values before or at index date.
+Triglyceride_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+Triglyceride_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+Cholesterol_latest,latest,True,7158,54.93,Latest observed value before or at index date.
+Cholesterol_mean,temporal_summary,True,827,6.35,Mean of historical values before or at index date.
+Cholesterol_min,temporal_summary,True,827,6.35,Minimum historical value before or at index date.
+Cholesterol_max,temporal_summary,True,827,6.35,Maximum historical value before or at index date.
+Cholesterol_std,temporal_summary,True,2555,19.61,Standard deviation of historical values before or at index date.
+Cholesterol_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+Cholesterol_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+FBS_latest,latest,True,8441,64.78,Latest observed value before or at index date.
+FBS_mean,temporal_summary,True,1425,10.94,Mean of historical values before or at index date.
+FBS_min,temporal_summary,True,1425,10.94,Minimum historical value before or at index date.
+FBS_max,temporal_summary,True,1425,10.94,Maximum historical value before or at index date.
+FBS_std,temporal_summary,True,3505,26.9,Standard deviation of historical values before or at index date.
+FBS_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+FBS_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+eGFR_latest,latest,True,6274,48.15,Latest observed value before or at index date.
+eGFR_mean,temporal_summary,True,849,6.52,Mean of historical values before or at index date.
+eGFR_min,temporal_summary,True,849,6.52,Minimum historical value before or at index date.
+eGFR_max,temporal_summary,True,849,6.52,Maximum historical value before or at index date.
+eGFR_std,temporal_summary,True,2446,18.77,Standard deviation of historical values before or at index date.
+eGFR_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+eGFR_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+Creatinine_latest,latest,True,6301,48.35,Latest observed value before or at index date.
+Creatinine_mean,temporal_summary,True,663,5.09,Mean of historical values before or at index date.
+Creatinine_min,temporal_summary,True,663,5.09,Minimum historical value before or at index date.
+Creatinine_max,temporal_summary,True,663,5.09,Maximum historical value before or at index date.
+Creatinine_std,temporal_summary,True,2121,16.28,Standard deviation of historical values before or at index date.
+Creatinine_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+Creatinine_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.
+TC:HDL_ratio_latest,latest,True,7299,56.01,Latest observed value before or at index date.
+TC:HDL_ratio_mean,temporal_summary,True,912,7.0,Mean of historical values before or at index date.
+TC:HDL_ratio_min,temporal_summary,True,912,7.0,Minimum historical value before or at index date.
+TC:HDL_ratio_max,temporal_summary,True,912,7.0,Maximum historical value before or at index date.
+TC:HDL_ratio_std,temporal_summary,True,2689,20.64,Standard deviation of historical values before or at index date.
+TC:HDL_ratio_count,temporal_summary,True,0,0.0,Number of non-missing historical values before or at index date.
+TC:HDL_ratio_missing_rate,missingness,True,0,0.0,Fraction of missing historical values before or at index date.

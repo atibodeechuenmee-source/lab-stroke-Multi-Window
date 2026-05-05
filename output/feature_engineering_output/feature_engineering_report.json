@@ -1,0 +1,32 @@
+{
+  "run_at": "2026-05-05T15:03:53",
+  "source_path": "data\\interim\\cleaned_stroke_records.csv",
+  "feature_table_path": "data\\processed\\patient_level_90d_stroke.csv",
+  "horizon_days": 90,
+  "patient_rows": 13031,
+  "positive_patients": 406,
+  "negative_patients": 12625,
+  "prevalence_percent": 3.12,
+  "model_feature_count": 88,
+  "excluded_patient_count": 604,
+  "leakage_columns_excluded": [
+    "PrincipleDiagnosis",
+    "ComorbidityDiagnosis",
+    "ตำบล",
+    "ยาที่ได้รับ"
+  ],
+  "outputs": {
+    "feature_table": "data\\processed\\patient_level_90d_stroke.csv",
+    "feature_list": "output\\feature_engineering_output\\feature_list.csv",
+    "feature_generation_log": "output\\feature_engineering_output\\feature_generation_log.csv",
+    "feature_engineering_report_json": "output\\feature_engineering_output\\feature_engineering_report.json",
+    "feature_engineering_report_md": "output\\feature_engineering_output\\feature_engineering_report.md",
+    "exclusions": "output\\feature_engineering_output\\feature_engineering_exclusions.csv"
+  },
+  "checks": {
+    "features_use_history_at_or_before_index_date": true,
+    "diagnosis_text_columns_used_as_features": false,
+    "target": "stroke_3m",
+    "unit_of_analysis": "patient"
+  }
+}

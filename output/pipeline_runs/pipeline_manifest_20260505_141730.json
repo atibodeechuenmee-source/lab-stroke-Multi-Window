@@ -1,0 +1,47 @@
+{
+  "run_at": "2026-05-05T14:17:30",
+  "dry_run": true,
+  "overview_doc": "docs/pipeline/00-pipeline-overview.md",
+  "records": [
+    {
+      "order": 1,
+      "key": "raw-data",
+      "name": "Raw Data",
+      "status": "ready",
+      "message": "Dry run only. Command ready: C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe src/raw_data.py",
+      "doc": "docs\\pipeline\\01-raw-data.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\raw_data.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\raw_data_output\\raw_schema_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\raw_data_output\\raw_missing_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\raw_data_output\\column_availability_checklist.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\raw_data_output\\raw_data_report.json",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/raw_data.py"
+      ]
+    }
+  ]
+}

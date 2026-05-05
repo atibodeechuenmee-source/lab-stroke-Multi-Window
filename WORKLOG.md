@@ -1,5 +1,25 @@
 # Worklog
 
+## 2026-05-05
+
+เพิ่ม pipeline planning และ implementation ขั้นต้น
+
+- เพิ่มเอกสารแผน pipeline รายขั้นใน `docs/pipeline/` ตั้งแต่ `00-pipeline-overview.md` ถึง `09-deployment-optional.md`
+- เพิ่ม `src/pipeline_overview.py` เป็น orchestrator สำหรับตรวจและรัน stage หลัก พร้อม `--dry-run` และ manifest ใน `output/pipeline_runs/`
+- เพิ่ม `src/raw_data.py` จากแผน `01-raw-data.md` เพื่อสร้าง raw schema summary, missing summary, column availability checklist และ raw data report
+- เพิ่ม `src/target_cohort.py` จากแผน `02-target-and-cohort.md` เพื่อสร้าง `stroke_flag`, record-level target และ patient-level 90-day cohort
+- เพิ่ม output ใหม่ใน `output/raw_data_output/` และ `output/target_cohort_output/`
+- เพิ่มเอกสาร `job/pipeline-implementation.md` เพื่อสรุปไฟล์โค้ด วิธีรัน ผลลัพธ์ และ validation commands
+- รันตรวจสอบ `py_compile`, `pipeline_overview.py --dry-run`, `pipeline_overview.py --stage raw-data` และ `pipeline_overview.py --stage target-and-cohort` สำเร็จ
+
+ผลลัพธ์สำคัญจาก pipeline stage ใหม่:
+
+- raw data มี 218,772 rows และ 30 columns
+- required columns สำหรับ target/cohort ครบ
+- record-level stroke prevalence 2.36%
+- patient-level 90-day cohort มี 13,031 patients
+- patient-level 90-day stroke prevalence 3.12%
+
 เพิ่มไฟล์ PowerPoint สำหรับนำเสนอ
 
 - ติดตั้ง dependency `python-pptx`
@@ -36,7 +56,7 @@
 
 ## ภาพรวมโปรเจกต์
 
-โปรเจกต์นี้ใช้สำหรับสำรวจและวิเคราะห์ข้อมูลผู้ป่วยจากไฟล์ Excel `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx` ผ่านสคริปต์ `src/preprocess.py`
+โปรเจกต์นี้ใช้สำหรับสำรวจและวิเคราะห์ข้อมูลผู้ป่วยจากไฟล์ Excel `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx` ผ่านสคริปต์ `src/eda.py`
 
 สคริปต์หลักทำงานดังนี้:
 
@@ -47,7 +67,7 @@
 
 ## โครงสร้างไฟล์สำคัญ
 
-- `src/preprocess.py` - สคริปต์หลักสำหรับอ่านข้อมูล วิเคราะห์เบื้องต้น และสร้างกราฟ
+- `src/eda.py` - สคริปต์หลักสำหรับอ่านข้อมูล วิเคราะห์เบื้องต้น และสร้างกราฟ EDA
 - `src/feature_importance.py` - สคริปต์สำหรับ modeling, feature importance, SHAP และ model comparison
 - `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx` - ไฟล์ข้อมูลต้นทาง
 - `output/eda_output/` - โฟลเดอร์เก็บไฟล์กราฟจาก EDA
@@ -59,7 +79,7 @@
 รันจากโฟลเดอร์หลักของโปรเจกต์:
 
 ```powershell
-.\.venv\Scripts\python.exe .\src\preprocess.py
+.\.venv\Scripts\python.exe .\src\eda.py
 ```
 
 หลังรันเสร็จ กราฟจะถูกบันทึกไว้ในโฟลเดอร์ `output`
@@ -89,14 +109,14 @@
 - ย้ายสคริปต์จาก `code/` ไป `src/`
 - ย้ายสำเนา Excel ที่เคยอยู่ใน `code/` ไป `data/raw/patients_with_tc_hdl_ratio_with_drugflag_code_copy.xlsx` เพื่อเก็บไว้ก่อน ไม่ลบข้อมูลที่อาจต่างกัน
 - เพิ่ม `src/__init__.py` และ `.gitkeep` สำหรับโฟลเดอร์ว่างที่ต้องการ track
-- ปรับ path ใน `src/preprocess.py` และ `src/feature_importance.py` ให้ชี้ไปที่ `data/raw/`
+- ปรับ path ใน `src/eda.py` และ `src/feature_importance.py` ให้ชี้ไปที่ `data/raw/`
 - อัปเดต `README.md`, `DATASET.md`, `job/EDA-stroke.md` และ `job/feature-importance-stroke.md` ให้ตรงกับโครงสร้างใหม่
 
 แยกโฟลเดอร์ผลลัพธ์ใน `output`
 
 - สร้าง `output/eda_output` สำหรับผลลัพธ์จาก EDA
 - สร้าง `output/feature_importance_output` สำหรับผลลัพธ์จาก feature importance
-- ปรับ `src/preprocess.py` ให้บันทึกกราฟ EDA ลง `output/eda_output`
+- ปรับ `src/eda.py` ให้บันทึกกราฟ EDA ลง `output/eda_output`
 - ปรับ `src/feature_importance.py` ให้บันทึกตาราง กราฟ และ metrics ลง `output/feature_importance_output`
 - ย้ายไฟล์ output เดิมไปยังโฟลเดอร์ย่อยตามประเภทงาน
 - อัปเดตเอกสารให้ชี้ path output ใหม่
@@ -153,10 +173,10 @@
 
 - ใช้เป็นไฟล์อธิบายภาพรวมของโปรเจกต์
 - ระบุว่าโปรเจกต์ทำอะไร ใช้ข้อมูลไฟล์ไหน และสร้างผลลัพธ์อะไร
-- เพิ่มวิธีรันสคริปต์ `src/preprocess.py`
+- เพิ่มวิธีรันสคริปต์ `src/eda.py`
 - อธิบายความแตกต่างระหว่าง `README.md` กับ `WORKLOG.md`
 
-ปรับการสร้างกราฟใน `src/preprocess.py`
+ปรับการสร้างกราฟใน `src/eda.py`
 
 - เปลี่ยนจากการเรียก `plt.show()` เป็นการบันทึกไฟล์ภาพลงโฟลเดอร์ `output`
 - เพิ่ม helper `save_current_plot()` เพื่อบันทึกกราฟซ้ำ ๆ ด้วยรูปแบบเดียวกัน

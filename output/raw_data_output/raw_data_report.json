@@ -1,0 +1,22 @@
+{
+  "run_at": "2026-05-05T14:18:02",
+  "raw_data_path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+  "data_dictionary_path": "DATASET.md",
+  "data_dictionary_exists": true,
+  "row_count": 218772,
+  "column_count": 30,
+  "missing_required_columns": [],
+  "outputs": {
+    "schema_summary": "output\\raw_data_output\\raw_schema_summary.csv",
+    "missing_summary": "output\\raw_data_output\\raw_missing_summary.csv",
+    "column_availability": "output\\raw_data_output\\column_availability_checklist.csv",
+    "column_list": "output\\raw_data_output\\raw_column_list.csv"
+  },
+  "checks": {
+    "raw_file_was_not_modified": true,
+    "has_hn": true,
+    "has_vstdate": true,
+    "has_principle_diagnosis": true,
+    "has_tc_hdl_ratio": true
+  }
+}

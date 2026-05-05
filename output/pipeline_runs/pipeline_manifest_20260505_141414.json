@@ -1,0 +1,234 @@
+{
+  "run_at": "2026-05-05T14:14:14",
+  "dry_run": true,
+  "overview_doc": "docs/pipeline/00-pipeline-overview.md",
+  "records": [
+    {
+      "order": 1,
+      "key": "raw-data",
+      "name": "Raw Data",
+      "status": "passed",
+      "message": "Expected outputs already exist.",
+      "doc": "docs\\pipeline\\01-raw-data.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "DATASET.md",
+          "exists": true
+        }
+      ],
+      "command": null
+    },
+    {
+      "order": 2,
+      "key": "target-and-cohort",
+      "name": "Target & Cohort Definition",
+      "status": "ready",
+      "message": "Dry run only. Command ready: C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe src/patient_level_prediction.py",
+      "doc": "docs\\pipeline\\02-target-and-cohort.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\patient_level_prediction.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data\\processed\\patient_level_90d_stroke.csv",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/patient_level_prediction.py"
+      ]
+    },
+    {
+      "order": 3,
+      "key": "data-cleaning",
+      "name": "Data Cleaning",
+      "status": "not_implemented",
+      "message": "Stage has a plan document but no production code yet.",
+      "doc": "docs\\pipeline\\03-data-cleaning.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        }
+      ],
+      "outputs": [],
+      "command": null
+    },
+    {
+      "order": 4,
+      "key": "eda",
+      "name": "EDA",
+      "status": "ready",
+      "message": "Dry run only. Command ready: C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe src/eda.py",
+      "doc": "docs\\pipeline\\04-eda.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\eda.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\eda_output",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/eda.py"
+      ]
+    },
+    {
+      "order": 5,
+      "key": "feature-engineering",
+      "name": "Feature Engineering",
+      "status": "ready",
+      "message": "Dry run only. Command ready: C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe src/patient_level_prediction.py",
+      "doc": "docs\\pipeline\\05-feature-engineering.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\patient_level_prediction.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data\\processed\\patient_level_90d_stroke.csv",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/patient_level_prediction.py"
+      ]
+    },
+    {
+      "order": 6,
+      "key": "modeling",
+      "name": "Modeling",
+      "status": "passed",
+      "message": "Expected outputs already exist.",
+      "doc": "docs\\pipeline\\06-modeling.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\feature_importance.py",
+          "exists": true
+        },
+        {
+          "path": "src\\patient_level_prediction.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\feature_importance_output",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output",
+          "exists": true
+        }
+      ],
+      "command": null
+    },
+    {
+      "order": 7,
+      "key": "feature-importance",
+      "name": "Feature Importance",
+      "status": "ready",
+      "message": "Dry run only. Command ready: C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe src/feature_importance.py",
+      "doc": "docs\\pipeline\\07-feature-importance.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\feature_importance.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\feature_importance_output",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/feature_importance.py"
+      ]
+    },
+    {
+      "order": 8,
+      "key": "validation",
+      "name": "Validation",
+      "status": "passed",
+      "message": "Expected outputs already exist.",
+      "doc": "docs\\pipeline\\08-validation.md",
+      "inputs": [
+        {
+          "path": "output\\feature_importance_output",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\feature_importance_output\\model_holdout_metrics.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_holdout_metrics.csv",
+          "exists": true
+        }
+      ],
+      "command": null
+    },
+    {
+      "order": 9,
+      "key": "deployment-optional",
+      "name": "Deployment Optional",
+      "status": "not_implemented",
+      "message": "Stage has a plan document but no production code yet.",
+      "doc": "docs\\pipeline\\09-deployment-optional.md",
+      "inputs": [
+        {
+          "path": "docs\\pipeline\\09-deployment-optional.md",
+          "exists": true
+        }
+      ],
+      "outputs": [],
+      "command": null
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "run_at": "2026-05-05T14:22:25",
+  "raw_data_path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+  "stroke_definition": "PrincipleDiagnosis ICD-10 I60-I69*",
+  "horizon_days": 90,
+  "checks": {
+    "principle_diagnosis_excluded_from_features": true,
+    "patient_level_features_must_use_history_at_or_before_index_date": true
+  },
+  "record_level_summary": {
+    "record_count": 218772,
+    "valid_patient_record_count": 218772,
+    "invalid_patient_record_count": 0,
+    "positive_record_count": 5170,
+    "negative_record_count": 213602,
+    "record_level_prevalence_percent": 2.36,
+    "invalid_vstdate_count": 0,
+    "missing_hn_count": 0
+  },
+  "patient_level_summary": {
+    "patient_cohort_count": 13031,
+    "positive_patient_count": 406,
+    "negative_patient_count": 12625,
+    "patient_level_prevalence_percent": 3.12,
+    "excluded_patient_count": 604,
+    "exclusion_counts": [
+      {
+        "reason": "positive_outside_horizon",
+        "patient_count": 604
+      }
+    ]
+  }
+}

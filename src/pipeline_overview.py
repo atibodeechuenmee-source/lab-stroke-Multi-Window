@@ -116,15 +116,15 @@ STAGES: tuple[PipelineStage, ...] = (
         name="Modeling",
         doc_path=Path("docs/pipeline/06-modeling.md"),
         inputs=(
-            Path("src/patient_level_prediction.py"),
             Path("data/processed/patient_level_90d_stroke.csv"),
+            Path("src/modeling.py"),
         ),
         outputs=(
             Path("output/model_output/patient_level_90d_cv_metrics_summary.csv"),
             Path("output/model_output/patient_level_90d_holdout_metrics.csv"),
             Path("output/model_output/patient_level_90d_model_report.txt"),
         ),
-        command=None,
+        command=(sys.executable, "src/modeling.py"),
     ),
     PipelineStage(
         order=7,

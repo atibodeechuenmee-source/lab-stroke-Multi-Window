@@ -66,9 +66,9 @@
 สร้างจาก `docs/pipeline/02-target-and-cohort.md`:
 
 - แปลง `vstdate` เป็น datetime
-- สร้าง `stroke_flag` จาก `PrincipleDiagnosis` ด้วย ICD-10 `I60-I69*`
-- สร้าง record-level target
+- สร้าง `stroke_flag` จาก `PrincipleDiagnosis` ด้วย ICD-10 `I60-I69*` เพื่อใช้เป็น event marker ระดับ record
 - สร้าง patient-level 90-day cohort พร้อม `index_date`, `event_date`, `days_to_event`, `stroke_3m`
+- ใช้ `stroke_3m` เป็น target หลักสำหรับโจทย์ทำนายอนาคตระดับคนไข้
 - สรุป excluded patients ที่ไม่เข้า cohort
 
 ผลรันล่าสุด:

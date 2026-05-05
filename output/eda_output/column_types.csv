@@ -29,3 +29,4 @@ Statin,int64,218772,0,0.0,2,218772
 Gemfibrozil,int64,218772,0,0.0,2,218772
 TC:HDL_ratio,float64,63739,155033,70.87,9064,218772
 Antihypertensive_flag,int64,218772,0,0.0,2,218772
+stroke_flag,int64,218772,0,0.0,2,218772

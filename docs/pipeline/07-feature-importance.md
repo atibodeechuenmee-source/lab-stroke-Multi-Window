@@ -4,12 +4,14 @@
 
 อธิบายว่า features ใดมีอิทธิพลต่อโมเดล และตรวจความสอดคล้องของ importance ระหว่างโมเดลและวิธีอธิบายผล
 
+feature importance หลักต้องมาจากโมเดล patient-level ที่ทำนาย `stroke_3m`
+
 ## Inputs
 
-- Trained model pipelines
+- Trained patient-level model pipelines
 - Feature names หลัง preprocessing
 - Holdout/test data หรือ sample สำหรับ explanation
-- Existing script/output: `src/feature_importance.py`, `output/feature_importance_output/`
+- Existing script/output: `src/patient_level_prediction.py`, `output/model_output/`
 
 ## Steps
 

@@ -4,12 +4,14 @@
 
 วางลำดับงานหลักสำหรับโปรเจกต์ stroke prediction ตั้งแต่ raw data ถึง validation และ deployment optional โดยแยกงานสำรวจข้อมูล งานเตรียมข้อมูล และงานโมเดลให้ชัดเจน
 
+โจทย์หลักของโปรเจกต์นี้คือทำนายระดับคนไข้ว่า **คนไข้จะเกิด primary stroke diagnosis ภายใน 90 วันหลัง index date หรือไม่** ดังนั้น target หลักสำหรับ modeling คือ `stroke_3m` ไม่ใช่ `stroke_flag` ระดับแถว
+
 ## Inputs
 
 - Raw data: `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx`
 - Existing EDA script/output: `src/eda.py`, `output/eda_output/`
-- Existing feature importance/modeling script/output: `src/feature_importance.py`, `output/feature_importance_output/`
-- Patient-level modeling notes/output ถ้าใช้โจทย์ 90-day prediction: `job/patient-level-3month-stroke-prediction.md`, `data/processed/patient_level_90d_stroke.csv`
+- Patient-level modeling script/output: `src/patient_level_prediction.py`, `data/processed/patient_level_90d_stroke.csv`, `output/model_output/`
+- `stroke_flag` ใช้เป็น event marker จาก `PrincipleDiagnosis` เพื่อหา stroke event date เท่านั้น
 
 ## Steps
 
@@ -35,4 +37,5 @@
 - แยก raw data ออกจาก processed data เสมอ
 - ทุก rule ที่เรียนรู้จากข้อมูล เช่น imputation, scaling, encoding, threshold ควร fit จาก train set เท่านั้น
 - หลีกเลี่ยงการใช้ diagnosis/text field ที่ทำให้เกิด target leakage
+- Train/test split และ validation ต้องทำระดับคนไข้ ไม่ให้ `hn` เดียวกันอยู่ทั้ง train และ test
 - ทุก output ควรระบุ source data, target definition, และวันที่รัน

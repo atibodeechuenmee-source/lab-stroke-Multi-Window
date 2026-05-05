@@ -6,7 +6,8 @@
 
 - อ่านข้อมูลผู้ป่วยจากไฟล์ Excel ใน `data/raw/`
 - ทำ EDA เพื่อตรวจสอบ missing values, distribution, correlation และ outliers
-- สร้าง target `stroke_flag` จาก `PrincipleDiagnosis` โดยใช้ ICD-10 ช่วง `I60-I69*`
+- สร้าง event marker `stroke_flag` จาก `PrincipleDiagnosis` โดยใช้ ICD-10 ช่วง `I60-I69*`
+- สร้าง target หลักระดับคนไข้ `stroke_3m` เพื่อทำนายว่าเกิด stroke ภายใน 90 วันหลัง index date หรือไม่
 - สร้างโมเดล RandomForest และ XGBoost เพื่อเปรียบเทียบผล
 - วิเคราะห์ feature importance และ SHAP explainability
 - บันทึกผลลัพธ์ทั้งหมดไว้ใน `output/`
@@ -66,20 +67,13 @@ output/
 - `output/eda_output/pairplot.png`
 - `output/eda_output/boxplot_*.png`
 
-ตัวอย่างไฟล์ modeling / explainability:
-
-- `output/feature_importance_output/feature_importance_stroke.csv`
-- `output/feature_importance_output/feature_importance_model_comparison.png`
-- `output/feature_importance_output/model_cv_metrics.csv`
-- `output/feature_importance_output/model_holdout_metrics.csv`
-- `output/feature_importance_output/shap_summary_random_forest.png`
-- `output/feature_importance_output/shap_local_positive_random_forest.png`
-
-ตัวอย่างไฟล์ patient-level prediction:
+ตัวอย่างไฟล์ patient-level modeling / explainability:
 
 - `data/processed/patient_level_90d_stroke.csv`
 - `output/model_output/patient_level_90d_model_report.txt`
 - `output/model_output/patient_level_90d_holdout_metrics.csv`
+- `output/model_output/patient_level_90d_feature_importance_comparison.csv`
+- `output/model_output/patient_level_90d_feature_importance_comparison.png`
 - `output/model_output/patient_level_90d_shap_summary_*.png`
 
 ## โครงสร้างโปรเจกต์

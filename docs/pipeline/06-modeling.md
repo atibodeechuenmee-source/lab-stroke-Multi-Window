@@ -4,15 +4,17 @@
 
 สร้างและเปรียบเทียบโมเดลทำนาย stroke ด้วย pipeline ที่ควบคุม leakage, class imbalance และ reproducibility
 
+โมเดลหลักต้องทำนาย `stroke_3m` ระดับคนไข้ ไม่ใช่ `stroke_flag` ระดับ visit/record
+
 ## Inputs
 
 - Feature table
-- Target column เช่น `stroke_flag` หรือ `stroke_3m`
-- Train/test split หรือ patient-level split
+- Target column: `stroke_3m`
+- Patient-level train/test split
 
 ## Steps
 
-1. แบ่ง train/test โดยใช้ stratification ตาม target
+1. แบ่ง train/test ระดับคนไข้โดยใช้ stratification ตาม `stroke_3m`
 2. สร้าง preprocessing pipeline เช่น imputation, missing indicator, scaling หรือ encoding ตามชนิดโมเดล
 3. สร้าง baseline model เช่น Logistic Regression
 4. Train โมเดล tree-based เช่น RandomForest และ XGBoost
@@ -32,5 +34,6 @@
 
 - Preprocessing ต้องอยู่ใน pipeline เพื่อ fit เฉพาะ train fold
 - Test set ใช้ครั้งสุดท้ายสำหรับประเมินเท่านั้น
+- ห้ามให้ `hn` เดียวกันอยู่ทั้ง train และ test
 - รายงาน ROC-AUC และ PR-AUC เพราะ positive class มีน้อย
 - ตรวจ precision, recall และ threshold ไม่ใช้ accuracy อย่างเดียว

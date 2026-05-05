@@ -4,9 +4,11 @@
 
 ตรวจว่าโมเดลทำงานได้จริงบนข้อมูลที่ไม่เคยเห็น และประเมินความเสี่ยงก่อนนำผลไปใช้ตัดสินใจหรือรายงาน
 
+validation หลักต้องเป็น patient-level validation ของ target `stroke_3m`
+
 ## Inputs
 
-- Trained model
+- Trained patient-level model
 - Holdout test set
 - CV metrics
 - Feature importance/SHAP outputs
@@ -33,6 +35,7 @@
 ## Checks
 
 - Validation ต้องไม่ใช้ข้อมูลที่ถูกใช้เลือก preprocessing/model โดยตรง
+- Validation ต้องประเมิน `stroke_3m` ระดับคนไข้ ไม่ใช่ `stroke_flag` ระดับ record
 - PR-AUC สำคัญมากเมื่อ positive class น้อย
 - ตรวจ recall ของ stroke class แยกจาก overall accuracy
 - รายงานข้อจำกัดก่อนสรุปว่าโมเดลพร้อมใช้งาน

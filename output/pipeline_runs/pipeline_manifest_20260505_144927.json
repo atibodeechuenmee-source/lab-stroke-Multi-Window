@@ -1,0 +1,61 @@
+{
+  "run_at": "2026-05-05T14:49:27",
+  "dry_run": false,
+  "overview_doc": "docs/pipeline/00-pipeline-overview.md",
+  "records": [
+    {
+      "order": 4,
+      "key": "eda",
+      "name": "EDA",
+      "status": "passed",
+      "message": "Command completed and expected outputs exist.",
+      "doc": "docs\\pipeline\\04-eda.md",
+      "inputs": [
+        {
+          "path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+          "exists": true
+        },
+        {
+          "path": "src\\eda.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\eda_output\\column_types.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\eda_output\\missing_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\eda_output\\numeric_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\eda_output\\percentile_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\eda_output\\outlier_summary_iqr.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\eda_output\\patient_level_target_distribution.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\eda_output\\eda_findings_summary.md",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/eda.py"
+      ],
+      "stdout_tail": "2\nmin         1.000000  ...       0.000000\n25%     17947.000000  ...       0.000000\n50%     46155.000000  ...       0.000000\n75%     97805.000000  ...       0.000000\nmax    279838.000000  ...       1.000000\nstd     60938.442222  ...       0.151900\n\n[8 rows x 27 columns]\n\nMissing Values:\nhn                            0\nvstdate                       0\nsex                           0\nage                           0\nheight                      243\nbw                          226\nbmi                         413\nsmoke                         0\ndrinking                      0\nbps                       27608\nbpd                       27483\nHDL                      154022\nLDL                      155180\nTriglyceride             157488\nCholesterol              153319\nAF                            0\nFBS                      162187\neGFR                     146847\nCreatinine               141851\nPrincipleDiagnosis            2\nComorbidityDiagnosis      58758\nà¸•à¸³à¸šà¸¥                      15227\nà¸¢à¸²à¸—à¸µà¹ˆà¹„à¸”à¹‰à¸£à¸±à¸š               40047\nheart_disease                 0\nhypertension                  0\ndiabetes                      0\nStatin                        0\nGemfibrozil                   0\nTC:HDL_ratio             155033\nAntihypertensive_flag         0\nstroke_flag                   0\ndtype: int64\nSaved table: output\\eda_output\\column_types.csv\nSaved table: output\\eda_output\\missing_summary.csv\nSaved table: output\\eda_output\\numeric_summary.csv\nSaved table: output\\eda_output\\percentile_summary.csv\nSaved table: output\\eda_output\\outlier_summary_iqr.csv\nSaved plot: output\\eda_output\\missing_values_heatmap.png\nSaved plot: output\\eda_output\\missing_values_percent.png\nSaved plot: output\\eda_output\\feature_distributions.png\nSaved plot: output\\eda_output\\feature_distributions_2.png\nSaved plot: output\\eda_output\\feature_distributions_3.png\nSaved plot: output\\eda_output\\correlation_matrix.png\nSaved table: output\\eda_output\\correlation_pairs_ranked.csv\nSaved plot: output\\eda_output\\boxplot_sex.png\nSaved plot: output\\eda_output\\boxplot_age.png\nSaved plot: output\\eda_output\\boxplot_height.png\nSaved plot: output\\eda_output\\boxplot_bw.png\nSaved plot: output\\eda_output\\boxplot_bmi.png\nSaved plot: output\\eda_output\\boxplot_smoke.png\nSaved plot: output\\eda_output\\boxplot_drinking.png\nSaved plot: output\\eda_output\\boxplot_bps.png\nSaved plot: output\\eda_output\\boxplot_bpd.png\nSaved plot: output\\eda_output\\boxplot_HDL.png\nSaved plot: output\\eda_output\\boxplot_LDL.png\nSaved plot: output\\eda_output\\boxplot_Triglyceride.png\nSaved plot: output\\eda_output\\boxplot_Cholesterol.png\nSaved plot: output\\eda_output\\boxplot_AF.png\nSaved plot: output\\eda_output\\boxplot_FBS.png\nSaved plot: output\\eda_output\\boxplot_eGFR.png\nSaved plot: output\\eda_output\\boxplot_Creatinine.png\nSaved plot: output\\eda_output\\boxplot_heart_disease.png\nSaved plot: output\\eda_output\\boxplot_hypertension.png\nSaved plot: output\\eda_output\\boxplot_diabetes.png\nSaved plot: output\\eda_output\\boxplot_Statin.png\nSaved plot: output\\eda_output\\boxplot_Gemfibrozil.png\nSaved plot: output\\eda_output\\boxplot_TC_HDL_ratio.png\nSaved plot: output\\eda_output\\boxplot_Antihypertensive_flag.png\nSaved plot: output\\eda_output\\boxplot_stroke_flag.png\nSaved plot: output\\eda_output\\pairplot.png\nSaved plot: output\\eda_output\\stroke_flag_distribution.png\nSaved table: output\\eda_output\\record_event_marker_distribution.csv\n\nMean values grouped by record-level stroke_flag:\n   stroke_flag            hn  ...  TC:HDL_ratio  Antihypertensive_flag\n0            0  65587.090580  ...      3.855174               0.629428\n1            1  65693.674662  ...      3.279504               0.379110\n\n[2 rows x 26 columns]\nSaved table: output\\eda_output\\stroke_flag_grouped_mean.csv\nSaved plot: output\\eda_output\\stroke_3m_distribution.png\nSaved table: output\\eda_output\\patient_level_target_distribution.csv\nSaved plot: output\\eda_output\\age_vs_TC_HDL_ratio.png\nSaved EDA findings summary: output\\eda_output\\eda_findings_summary.md\n",
+      "stderr_tail": ""
+    }
+  ]
+}

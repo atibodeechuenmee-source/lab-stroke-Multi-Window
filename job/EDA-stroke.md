@@ -165,16 +165,21 @@ output/eda_output/pairplot.png
 
 ## ขั้นตอนที่ 8: Target/Flag Analysis
 
-สคริปต์มี logic สำหรับตรวจคอลัมน์ `drugflag` หากมีอยู่ใน dataset:
+โจทย์หลักของโปรเจกต์คือ patient-level future prediction ดังนั้น target หลักคือ `stroke_3m` จาก patient-level cohort ไม่ใช่การนับ `stroke_flag` รายแถว
 
-```python
-if 'drugflag' in df.columns:
-    sns.countplot(x='drugflag', data=df)
-```
+สคริปต์ EDA ปัจจุบันรายงานสองส่วนแยกกัน:
 
-แต่ dataset ปัจจุบันไม่มีคอลัมน์ชื่อ `drugflag` โดยตรง จึงไม่ได้สร้างกราฟ `drugflag_distribution.png`
+- `stroke_3m` - target หลักระดับคนไข้จาก `output/target_cohort_output/patient_level_90d_cohort.csv`
+- `stroke_flag` - event marker ระดับ record ที่สร้างจาก `PrincipleDiagnosis` ICD-10 `I60-I69*` เพื่อช่วยหา event date
 
-อย่างไรก็ตาม dataset มี flag ที่เกี่ยวข้องกับยาและโรค เช่น:
+ไฟล์ output ที่เกี่ยวข้อง:
+
+- `patient_level_target_distribution.csv`
+- `stroke_3m_distribution.png`
+- `record_event_marker_distribution.csv`
+- `stroke_flag_distribution.png`
+
+นอกจากนี้ dataset ยังมี flag ที่เกี่ยวข้องกับยาและโรค เช่น:
 
 - `Statin`
 - `Gemfibrozil`
@@ -185,16 +190,13 @@ if 'drugflag' in df.columns:
 
 ## ขั้นตอนที่ 9: Scatter Plot
 
-สคริปต์มี logic สำหรับสร้าง scatter plot ระหว่าง `age` และ `tc_hdl_ratio` หากมีคอลัมน์ตรงตามชื่อ:
+สคริปต์มี logic สำหรับสร้าง scatter plot ระหว่าง `age` และ `TC:HDL_ratio`:
 
 ```python
-if 'tc_hdl_ratio' in df.columns and 'age' in df.columns:
-    sns.scatterplot(x='age', y='tc_hdl_ratio', hue='drugflag', data=df)
+sns.scatterplot(x='age', y='TC:HDL_ratio', hue='stroke_flag', data=df)
 ```
 
-แต่ dataset ปัจจุบันใช้ชื่อคอลัมน์ `TC:HDL_ratio` ไม่ใช่ `tc_hdl_ratio` จึงไม่ได้สร้างกราฟ scatter plot ส่วนนี้
-
-หากต้องการใช้กราฟนี้ต่อ ควรปรับชื่อคอลัมน์ในสคริปต์ให้ตรงกับ dataset ปัจจุบัน
+กราฟนี้ใช้ `stroke_flag` เป็นสีเพื่อดู record-level event marker เท่านั้น ไม่ใช่ target หลักของโมเดล
 
 ## Output จาก EDA
 

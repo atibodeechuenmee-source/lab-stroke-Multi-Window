@@ -1,5 +1,7 @@
 # Feature Importance for Stroke
 
+หมายเหตุ: เอกสารนี้เป็นงาน feature importance แบบ record-level เดิมที่ใช้ `stroke_flag` เป็น target สำหรับสำรวจเบื้องต้นเท่านั้น สำหรับโจทย์หลักปัจจุบัน "คนไข้คนนี้จะเป็น stroke ภายในอนาคตไหม" ให้ใช้ patient-level workflow ใน `job/patient-level-3month-stroke-prediction.md` และ target `stroke_3m` เป็นหลัก
+
 เอกสารนี้อธิบายการทำ feature importance สำหรับ dataset ผู้ป่วยในโปรเจกต์นี้ โดยใช้สคริปต์ `src/feature_importance.py`
 
 ## วัตถุประสงค์

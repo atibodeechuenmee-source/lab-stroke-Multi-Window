@@ -1,0 +1,111 @@
+{
+  "run_at": "2026-05-05T14:49:26",
+  "input_path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+  "row_count": 218772,
+  "column_count": 31,
+  "numeric_feature_count": 25,
+  "primary_modeling_target": "stroke_3m",
+  "primary_modeling_target_level": "patient",
+  "patient_target_summary": {
+    "patient_count": 13031,
+    "positive_patients": 406,
+    "negative_patients": 12625,
+    "prevalence_percent": 3.12
+  },
+  "record_event_marker": "stroke_flag",
+  "record_event_marker_summary": {
+    "positive_records": 5170,
+    "negative_records": 213602,
+    "prevalence_percent": 2.36
+  },
+  "high_missing_features": {
+    "FBS": 74.14,
+    "Triglyceride": 71.99,
+    "LDL": 70.93,
+    "TC:HDL_ratio": 70.87,
+    "HDL": 70.4,
+    "Cholesterol": 70.08,
+    "eGFR": 67.12,
+    "Creatinine": 64.84
+  },
+  "moderate_missing_features": {
+    "ComorbidityDiagnosis": 26.86,
+    "ยาที่ได้รับ": 18.31,
+    "bps": 12.62,
+    "bpd": 12.56,
+    "ตำบล": 6.96
+  },
+  "top_correlations": [
+    {
+      "feature_1": "LDL",
+      "feature_2": "Cholesterol",
+      "correlation": 0.9158700009075044,
+      "abs_correlation": 0.9158700009075044
+    },
+    {
+      "feature_1": "bw",
+      "feature_2": "bmi",
+      "correlation": 0.8831496707746831,
+      "abs_correlation": 0.8831496707746831
+    },
+    {
+      "feature_1": "smoke",
+      "feature_2": "drinking",
+      "correlation": 0.7847119433105888,
+      "abs_correlation": 0.7847119433105888
+    },
+    {
+      "feature_1": "eGFR",
+      "feature_2": "Creatinine",
+      "correlation": -0.7684567239753402,
+      "abs_correlation": 0.7684567239753402
+    },
+    {
+      "feature_1": "HDL",
+      "feature_2": "TC:HDL_ratio",
+      "correlation": -0.6873073470278438,
+      "abs_correlation": 0.6873073470278438
+    },
+    {
+      "feature_1": "sex",
+      "feature_2": "height",
+      "correlation": -0.6288091339122313,
+      "abs_correlation": 0.6288091339122313
+    },
+    {
+      "feature_1": "LDL",
+      "feature_2": "TC:HDL_ratio",
+      "correlation": 0.6102710148133065,
+      "abs_correlation": 0.6102710148133065
+    },
+    {
+      "feature_1": "age",
+      "feature_2": "eGFR",
+      "correlation": -0.6001292272118127,
+      "abs_correlation": 0.6001292272118127
+    },
+    {
+      "feature_1": "FBS",
+      "feature_2": "diabetes",
+      "correlation": 0.5353786327486534,
+      "abs_correlation": 0.5353786327486534
+    },
+    {
+      "feature_1": "bps",
+      "feature_2": "bpd",
+      "correlation": 0.5272890872500482,
+      "abs_correlation": 0.5272890872500482
+    }
+  ],
+  "checks": {
+    "eda_is_descriptive": true,
+    "preprocessing_rules_for_modeling_should_be_refit_on_train_only": true,
+    "derived_feature_caution": "TC:HDL_ratio depends on cholesterol and HDL",
+    "leakage_risk_columns": [
+      "PrincipleDiagnosis",
+      "ComorbidityDiagnosis",
+      "ยาที่ได้รับ",
+      "ตำบล"
+    ]
+  }
+}

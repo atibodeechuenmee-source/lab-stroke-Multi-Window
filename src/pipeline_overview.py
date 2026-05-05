@@ -131,12 +131,18 @@ STAGES: tuple[PipelineStage, ...] = (
         key="feature-importance",
         name="Feature Importance",
         doc_path=Path("docs/pipeline/07-feature-importance.md"),
-        inputs=(Path("data/processed/patient_level_90d_stroke.csv"), Path("output/model_output")),
+        inputs=(
+            Path("data/processed/patient_level_90d_stroke.csv"),
+            Path("output/model_output/patient_level_90d_holdout_metrics.csv"),
+            Path("src/feature_importance.py"),
+        ),
         outputs=(
             Path("output/model_output/patient_level_90d_feature_importance_comparison.csv"),
             Path("output/model_output/patient_level_90d_feature_importance_comparison.png"),
+            Path("output/model_output/patient_level_90d_shap_importance_xgboost.csv"),
+            Path("output/model_output/patient_level_90d_feature_importance_report.txt"),
         ),
-        command=None,
+        command=(sys.executable, "src/feature_importance.py"),
     ),
     PipelineStage(
         order=8,

@@ -1,0 +1,52 @@
+{
+  "run_at": "2026-05-05T15:25:22",
+  "feature_table_path": "data\\processed\\patient_level_90d_stroke.csv",
+  "target": "stroke_3m",
+  "unit_of_analysis": "patient",
+  "patient_rows": 13031,
+  "positive_patients": 406,
+  "negative_patients": 12625,
+  "prevalence_percent": 3.12,
+  "shap_model": "xgboost",
+  "top_features_by_model": {
+    "random_forest": [
+      "index_year",
+      "history_days_observed",
+      "eGFR_missing_rate",
+      "age_latest",
+      "eGFR_max",
+      "index_month",
+      "eGFR_mean",
+      "bmi_latest",
+      "Creatinine_max",
+      "Creatinine_mean"
+    ],
+    "xgboost": [
+      "index_year",
+      "missingindicator_FBS_latest",
+      "TC:HDL_ratio_missing_rate",
+      "index_month",
+      "hypertension_latest",
+      "Cholesterol_missing_rate",
+      "Triglyceride_missing_rate",
+      "eGFR_max",
+      "AF_latest",
+      "diabetes_latest"
+    ]
+  },
+  "outputs": {
+    "tree_importance_csv": "output\\model_output\\patient_level_90d_feature_importance_comparison.csv",
+    "tree_importance_plot": "output\\model_output\\patient_level_90d_feature_importance_comparison.png",
+    "summary_plot": "output\\model_output\\patient_level_90d_shap_summary_xgboost.png",
+    "bar_plot": "output\\model_output\\patient_level_90d_shap_bar_xgboost.png",
+    "importance_csv": "output\\model_output\\patient_level_90d_shap_importance_xgboost.csv",
+    "local_positive_plot": "output\\model_output\\patient_level_90d_shap_local_positive_xgboost.png",
+    "local_negative_plot": "output\\model_output\\patient_level_90d_shap_local_negative_xgboost.png"
+  },
+  "interpretation_notes": [
+    "Importance explains model behavior for patient-level stroke_3m prediction, not causal effects.",
+    "Model-native tree importance can favor continuous or high-cardinality variables.",
+    "Missing indicator features describe data availability patterns, not direct lab values.",
+    "Local SHAP plots explain individual sampled patients and should not be generalized to the full cohort."
+  ]
+}

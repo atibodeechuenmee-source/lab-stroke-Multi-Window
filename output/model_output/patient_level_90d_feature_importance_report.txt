@@ -1,0 +1,40 @@
+Patient-Level 90-Day Stroke Feature Importance Report
+=====================================================
+
+Target: stroke_3m
+Unit of analysis: patient
+Rows: 13,031
+Positive patients: 406
+Prevalence: 3.12%
+SHAP model: xgboost
+
+Top features: random_forest
+1. index_year
+2. history_days_observed
+3. eGFR_missing_rate
+4. age_latest
+5. eGFR_max
+6. index_month
+7. eGFR_mean
+8. bmi_latest
+9. Creatinine_max
+10. Creatinine_mean
+
+Top features: xgboost
+1. index_year
+2. missingindicator_FBS_latest
+3. TC:HDL_ratio_missing_rate
+4. index_month
+5. hypertension_latest
+6. Cholesterol_missing_rate
+7. Triglyceride_missing_rate
+8. eGFR_max
+9. AF_latest
+10. diabetes_latest
+
+Interpretation Notes
+--------------------
+- Importance explains model behavior for patient-level stroke_3m prediction, not causal effects.
+- Model-native tree importance can favor continuous or high-cardinality variables.
+- Missing indicator features describe data availability patterns, not direct lab values.
+- Local SHAP plots explain individual sampled patients and should not be generalized to the full cohort.

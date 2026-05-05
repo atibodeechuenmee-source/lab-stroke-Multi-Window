@@ -1,0 +1,53 @@
+{
+  "run_at": "2026-05-05T15:25:23",
+  "dry_run": false,
+  "overview_doc": "docs/pipeline/00-pipeline-overview.md",
+  "records": [
+    {
+      "order": 7,
+      "key": "feature-importance",
+      "name": "Feature Importance",
+      "status": "passed",
+      "message": "Command completed and expected outputs exist.",
+      "doc": "docs\\pipeline\\07-feature-importance.md",
+      "inputs": [
+        {
+          "path": "data\\processed\\patient_level_90d_stroke.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_holdout_metrics.csv",
+          "exists": true
+        },
+        {
+          "path": "src\\feature_importance.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\model_output\\patient_level_90d_feature_importance_comparison.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_feature_importance_comparison.png",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_shap_importance_xgboost.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_feature_importance_report.txt",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/feature_importance.py"
+      ],
+      "stdout_tail": "Training model for importance: logistic_regression\nTraining model for importance: random_forest\nTraining model for importance: xgboost\nSaved tree importance table: output\\model_output\\patient_level_90d_feature_importance_comparison.csv\nSaved tree importance plot: output\\model_output\\patient_level_90d_feature_importance_comparison.png\nRunning SHAP analysis: xgboost\nSaved SHAP outputs for xgboost\nSaved interpretation report: output\\model_output\\patient_level_90d_feature_importance_report.txt\nFeature importance completed\nTarget: stroke_3m\nSHAP model: xgboost\nOutput directory: output\\model_output\n",
+      "stderr_tail": ""
+    }
+  ]
+}

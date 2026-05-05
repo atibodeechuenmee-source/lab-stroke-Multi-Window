@@ -149,13 +149,20 @@ STAGES: tuple[PipelineStage, ...] = (
         key="validation",
         name="Validation",
         doc_path=Path("docs/pipeline/08-validation.md"),
-        inputs=(Path("output/model_output"),),
-        outputs=(
+        inputs=(
+            Path("data/processed/patient_level_90d_stroke.csv"),
             Path("output/model_output/patient_level_90d_holdout_metrics.csv"),
             Path("output/model_output/patient_level_90d_cv_metrics_summary.csv"),
-            Path("output/model_output/patient_level_90d_model_report.txt"),
+            Path("output/model_output/patient_level_90d_feature_importance_report.txt"),
+            Path("src/validation.py"),
         ),
-        command=None,
+        outputs=(
+            Path("output/validation_output/patient_level_90d_validation_report.txt"),
+            Path("output/validation_output/patient_level_90d_threshold_analysis.csv"),
+            Path("output/validation_output/patient_level_90d_calibration_summary.csv"),
+            Path("output/validation_output/patient_level_90d_leakage_audit.csv"),
+        ),
+        command=(sys.executable, "src/validation.py"),
     ),
     PipelineStage(
         order=9,

@@ -1,0 +1,61 @@
+{
+  "run_at": "2026-05-05T20:49:00",
+  "dry_run": false,
+  "overview_doc": "docs/pipeline/00-pipeline-overview.md",
+  "records": [
+    {
+      "order": 8,
+      "key": "validation",
+      "name": "Validation",
+      "status": "passed",
+      "message": "Command completed and expected outputs exist.",
+      "doc": "docs\\pipeline\\08-validation.md",
+      "inputs": [
+        {
+          "path": "data\\processed\\patient_level_90d_stroke.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_holdout_metrics.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_cv_metrics_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\model_output\\patient_level_90d_feature_importance_report.txt",
+          "exists": true
+        },
+        {
+          "path": "src\\validation.py",
+          "exists": true
+        }
+      ],
+      "outputs": [
+        {
+          "path": "output\\validation_output\\patient_level_90d_validation_report.txt",
+          "exists": true
+        },
+        {
+          "path": "output\\validation_output\\patient_level_90d_threshold_analysis.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\validation_output\\patient_level_90d_calibration_summary.csv",
+          "exists": true
+        },
+        {
+          "path": "output\\validation_output\\patient_level_90d_leakage_audit.csv",
+          "exists": true
+        }
+      ],
+      "command": [
+        "C:\\CS\\lab_stroke\\one\\.venv\\Scripts\\python.exe",
+        "src/validation.py"
+      ],
+      "stdout_tail": "Training validation model: xgboost\nValidation completed\nModel: xgboost\nPR-AUC: 0.2172\nRecommendation: Not ready for clinical decision-making; suitable for research reporting and workflow iteration only.\nOutput directory: output\\validation_output\n",
+      "stderr_tail": ""
+    }
+  ]
+}

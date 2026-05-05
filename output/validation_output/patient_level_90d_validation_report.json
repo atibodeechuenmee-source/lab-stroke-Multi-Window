@@ -1,0 +1,72 @@
+{
+  "run_at": "2026-05-05T20:49:00",
+  "target": "stroke_3m",
+  "unit_of_analysis": "patient",
+  "model": "xgboost",
+  "patient_rows": 13031,
+  "holdout_rows": 3258,
+  "holdout_positive_patients": 102,
+  "holdout_prevalence_percent": 3.13,
+  "holdout_metrics": {
+    "roc_auc": 0.8849840950321827,
+    "pr_auc": 0.2171657950131442,
+    "brier_score": 0.09272909164428711,
+    "prevalence": 0.03130755064456722
+  },
+  "threshold_0_5": {
+    "threshold": 0.5,
+    "accuracy": 0.8566605279312461,
+    "precision": 0.1470019342359768,
+    "recall": 0.7450980392156863,
+    "f1": 0.2455573505654281,
+    "true_negative": 2715.0,
+    "false_positive": 441.0,
+    "false_negative": 26.0,
+    "true_positive": 76.0,
+    "predicted_positive": 517.0
+  },
+  "best_f1_threshold": {
+    "threshold": 0.6,
+    "accuracy": 0.8956414978514426,
+    "precision": 0.1783783783783784,
+    "recall": 0.6470588235294118,
+    "f1": 0.2796610169491525,
+    "true_negative": 2852.0,
+    "false_positive": 304.0,
+    "false_negative": 36.0,
+    "true_positive": 66.0,
+    "predicted_positive": 370.0
+  },
+  "high_recall_threshold": {
+    "threshold": 0.4,
+    "accuracy": 0.8179864947820749,
+    "precision": 0.1274658573596358,
+    "recall": 0.8235294117647058,
+    "f1": 0.22076215505913271,
+    "true_negative": 2581.0,
+    "false_positive": 575.0,
+    "false_negative": 18.0,
+    "true_positive": 84.0,
+    "predicted_positive": 659.0
+  },
+  "calibration_mean_absolute_error": 0.17081926259760644,
+  "leakage_audit_review_features": [
+    "index_year",
+    "index_month"
+  ],
+  "recommendation": "Not ready for clinical decision-making; suitable for research reporting and workflow iteration only.",
+  "limitations": [
+    "Validation uses an internal holdout split, not an external hospital or future-time validation cohort.",
+    "Threshold choice changes the precision-recall tradeoff and should be tied to the clinical use case.",
+    "Predicted probabilities need calibration review before use as absolute risk estimates.",
+    "Feature importance and validation metrics do not prove causal relationships."
+  ],
+  "outputs": {
+    "validation_report_txt": "output\\validation_output\\patient_level_90d_validation_report.txt",
+    "validation_report_json": "output\\validation_output\\patient_level_90d_validation_report.json",
+    "holdout_predictions": "output\\validation_output\\patient_level_90d_holdout_predictions.csv",
+    "threshold_analysis": "output\\validation_output\\patient_level_90d_threshold_analysis.csv",
+    "calibration_summary": "output\\validation_output\\patient_level_90d_calibration_summary.csv",
+    "leakage_audit": "output\\validation_output\\patient_level_90d_leakage_audit.csv"
+  }
+}

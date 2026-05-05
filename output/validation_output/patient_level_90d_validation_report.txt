@@ -1,0 +1,37 @@
+Patient-Level 90-Day Stroke Validation Report
+=============================================
+
+Target: stroke_3m
+Unit of analysis: patient
+Validated model: xgboost
+Holdout rows: 3,258
+Holdout positives: 102
+Holdout prevalence: 3.13%
+
+Holdout Metrics
+---------------
+ROC-AUC: 0.8850
+PR-AUC: 0.2172
+Brier score: 0.0927
+
+Threshold 0.50
+--------------
+Precision: 0.1470
+Recall: 0.7451
+F1: 0.2456
+Confusion matrix [[TN, FP], [FN, TP]]: [[2715.0, 441.0], [26.0, 76.0]]
+
+Recommendation
+--------------
+Not ready for clinical decision-making; suitable for research reporting and workflow iteration only.
+
+Leakage Audit
+-------------
+Features requiring review: index_year, index_month
+
+Limitations
+-----------
+- Validation uses an internal holdout split, not an external hospital or future-time validation cohort.
+- Threshold choice changes the precision-recall tradeoff and should be tied to the clinical use case.
+- Predicted probabilities need calibration review before use as absolute risk estimates.
+- Feature importance and validation metrics do not prove causal relationships.

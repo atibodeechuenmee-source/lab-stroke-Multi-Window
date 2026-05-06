@@ -1,38 +1,52 @@
-# Feature Importance
+# Stage 07: Feature Importance and Dimensionality Reduction
 
-## Goal
+## Purpose
 
-อธิบายว่า features ใดมีอิทธิพลต่อโมเดล และตรวจความสอดคล้องของ importance ระหว่างโมเดลและวิธีอธิบายผล
+ประเมิน feature importance และลดมิติของ temporal features เพื่อเปรียบเทียบ ANOVA F-test, PCA และ ANOVA ตามด้วย PCA ตามแนวทาง paper
 
-feature importance หลักต้องมาจากโมเดล patient-level ที่ทำนาย `stroke_3m`
+## Input
 
-## Inputs
+- Extract Set 1/2/3 feature tables จาก Stage 05
+- Stroke labels จาก Stage 02
+- Model predictions/configs จาก Stage 06
 
-- Trained patient-level model pipelines
-- Feature names หลัง preprocessing
-- Holdout/test data หรือ sample สำหรับ explanation
-- Existing script/output: `src/patient_level_prediction.py`, `output/model_output/`
+## Process
 
-## Steps
+1. ANOVA F-test:
+   - rank numerical features ตาม F-score หรือ p-value
+   - ทดลอง top-k features เช่น 5, 10, 15, 20, 30, 40, 50
+   - เลือก k จาก G-Mean บน CV
+2. PCA:
+   - standardize numerical features ก่อน PCA
+   - ทดลองจำนวน components หลายค่า
+   - เลือกจำนวน components จาก G-Mean บน CV
+3. ANOVA + PCA:
+   - เลือก top-k features ด้วย ANOVA
+   - ทำ PCA บน selected features
+   - train Logistic Regression และเปรียบเทียบกับวิธีอื่น
+4. Model interpretability:
+   - Logistic Regression coefficients สำหรับ features ที่ไม่ผ่าน PCA
+   - Feature importance สำหรับ Random Forest/XGBoost ถ้ามี
+   - ระบุข้อจำกัดว่า PCA ลด interpretability
 
-1. Export impurity-based importance สำหรับ RandomForest หรือ tree-based models
-2. Export XGBoost importance ถ้ามี XGBoost model
-3. เปรียบเทียบ top features ระหว่างโมเดล
-4. สร้าง SHAP global summary และ SHAP bar plot
-5. สร้าง local SHAP สำหรับตัวอย่าง positive และ negative
-6. สรุป clinical interpretation และข้อจำกัด
+## Output
 
-## Outputs
+- ANOVA feature ranking
+- PCA component performance table
+- ANOVA + PCA performance table
+- Selected features/components
+- Feature importance report
+- Interpretability notes
 
-- Feature importance CSV
-- Feature importance plots
-- Model comparison importance table/plot
-- SHAP summary, bar, local explanation plots
-- Interpretation notes
+## Checks / Acceptance Criteria
 
-## Checks
+- Feature selection ต้องทำภายใน training fold เพื่อหลีกเลี่ยง leakage
+- PCA scaler และ PCA model ต้อง fit เฉพาะ training data ในแต่ละ fold
+- รายงาน best k หรือ best component count สำหรับ Extract Set 1/2/3
+- ระบุชัดว่า feature importance จาก PCA ตีความโดยตรงไม่ได้เท่า original features
+- Output ต้องพร้อมใช้เปรียบเทียบใน validation stage
 
-- Importance ไม่ใช่ causal effect
-- Impurity-based importance อาจ bias ต่อ continuous/high-cardinality features
-- Missing indicators ที่สำคัญควรตีความเป็น pattern การมีหรือไม่มีข้อมูล ไม่ใช่ค่าทาง lab โดยตรง
-- Local SHAP ควรระบุว่าเป็นตัวอย่างเฉพาะราย ไม่ใช่ข้อสรุปทั้ง cohort
+## Relation to Paper
+
+Paper เปรียบเทียบ ANOVA F-test, PCA และ ANOVA+PCA เพื่อจัดการ feature dimensionality และ multicollinearity ของ temporal features Stage นี้จึงทำหน้าที่จำลอง analysis นั้นในโปรเจกต์ของเรา
+

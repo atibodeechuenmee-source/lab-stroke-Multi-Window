@@ -1,43 +1,57 @@
-# EDA
+# Stage 04: Exploratory Data Analysis
 
-## Goal
+## Purpose
 
-สำรวจข้อมูลเพื่อเข้าใจ distribution, missing pattern, class imbalance, correlation และ outliers ก่อนสร้าง features และโมเดล
+ทำ EDA เพื่อประเมินความพร้อมของข้อมูลสำหรับ temporal stroke-risk prediction โดยเน้น class imbalance, missingness, visit coverage, temporal window coverage และความต่างระหว่าง stroke กับ non-stroke
 
-สำหรับโจทย์นี้ EDA ต้องแยกให้ชัดว่า `stroke_flag` เป็น event marker ระดับ record ส่วน target หลักของโมเดลคือ `stroke_3m` ระดับคนไข้
+## Input
 
-## Inputs
+- Cleaned pre-reference records จาก Stage 03
+- Patient-level cohort จาก Stage 02
+- Window assignment: FIRST, MID, LAST
 
-- Raw หรือ cleaned dataset ตามวัตถุประสงค์ของ EDA
-- Existing EDA script: `src/eda.py`
-- Existing outputs: `output/eda_output/`
+## Process
 
-## Steps
+1. Class imbalance:
+   - นับ stroke และ non-stroke patients
+   - รายงาน stroke prevalence หลัง cohort filtering
+2. Visit frequency:
+   - จำนวน visits ต่อ patient
+   - จำนวน visits ต่อ temporal window
+   - distribution ของ time gap ระหว่าง visits
+3. Missingness:
+   - missing percent ราย variable
+   - missingness แยกตาม stroke/non-stroke
+   - missingness แยกตาม FIRST/MID/LAST
+4. Temporal coverage:
+   - จำนวน patient ที่ครบทุก window
+   - จำนวน patient ที่หลุดเพราะ window coverage ไม่พอ
+   - sensitivity note สำหรับ alternative windows เช่น 90/180 วัน
+5. Clinical distribution:
+   - distribution ของ BPS, BPD, HDL, LDL, FBS, BMI, eGFR, creatinine, total cholesterol, triglycerides
+   - เปรียบเทียบ stroke vs non-stroke
+6. Leakage audit เบื้องต้น:
+   - ตรวจว่าไม่มีค่า lab, diagnosis หรือ medication หลัง reference date ใน EDA set
 
-1. สรุป schema, dtype, missing count, missing percent
-2. ตรวจ distribution ของ numeric features เช่น age, BMI, blood pressure, labs
-3. ตรวจ categorical/flag features เช่น sex, smoke, drinking, comorbidity flags, medication flags
-4. ตรวจ `stroke_3m` distribution และ class imbalance ระดับคนไข้
-5. ตรวจ correlation ระหว่าง numeric features
-6. ตรวจ outliers ผ่าน boxplot และ percentile summary
-7. สรุปข้อค้นพบที่ส่งผลต่อ cleaning, feature engineering และ modeling
+## Output
 
-## Outputs
+- EDA summary report
+- Class imbalance table
+- Missingness tables
+- Visit coverage summary
+- Temporal coverage summary
+- Stroke vs non-stroke descriptive statistics
+- Leakage audit summary
 
-- `column_types.csv`
-- `missing_summary.csv`
-- `numeric_summary.csv`
-- missing value plots
-- distribution plots
-- correlation plots
-- outlier plots
-- EDA findings summary
-- patient-level target distribution ของ `stroke_3m`
+## Checks / Acceptance Criteria
 
-## Checks
+- มีรายงาน stroke/non-stroke count ระดับ patient
+- มีรายงาน visit coverage แยก FIRST, MID, LAST
+- ระบุ variables ที่ missing สูงหรือไม่พร้อมใช้ temporal features
+- ระบุว่า completeness criteria ทำให้ sample ลดลงมากแค่ไหน
+- ไม่ใช้ข้อมูลหลัง reference date ใน plot หรือ summary ใด ๆ
 
-- EDA เพื่อรายงานภาพรวมทำบนข้อมูลทั้งหมดได้ แต่ insight ที่กำหนด preprocessing rule สำหรับโมเดลต้องตรวจซ้ำบน train set
-- ระวัง correlation ที่เกิดจาก derived features เช่น `TC:HDL_ratio`
-- ระบุ features ที่มี missing สูงและควรมี missing indicator
-- ระบุ features ที่เสี่ยง leakage เช่น diagnosis/text columns
-- ห้ามตีความ `stroke_flag` ระดับ record เป็น target หลักของ future prediction
+## Relation to Paper
+
+Paper ใช้ strict temporal alignment และ completeness criteria ซึ่งอาจลด sample จำนวนมาก Stage นี้จึงต้องตรวจให้เห็นก่อนว่า dataset ของเรารองรับ multi-window temporal modeling ได้ดีแค่ไหน
+

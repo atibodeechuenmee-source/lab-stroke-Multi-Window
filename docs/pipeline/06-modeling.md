@@ -1,39 +1,54 @@
-# Modeling
+# Stage 06: Modeling
 
-## Goal
+## Purpose
 
-สร้างและเปรียบเทียบโมเดลทำนาย stroke ด้วย pipeline ที่ควบคุม leakage, class imbalance และ reproducibility
+ฝึกและเปรียบเทียบ model สำหรับ stroke-risk prediction โดยต้องมี single-shot baseline เป็น comparator เสมอ เพื่อวัดประโยชน์ของ temporal features
 
-โมเดลหลักต้องทำนาย `stroke_3m` ระดับคนไข้ ไม่ใช่ `stroke_flag` ระดับ visit/record
+## Input
 
-## Inputs
+- Single-shot baseline feature table จาก Stage 05
+- Extract Set 1/2/3 feature tables จาก Stage 05
+- Patient-level stroke labels จาก Stage 02
 
-- Feature table
-- Target column: `stroke_3m`
-- Patient-level train/test split
+## Process
 
-## Steps
+1. Baseline model:
+   - ใช้ single-shot features จาก latest pre-reference record
+   - train Logistic Regression with balanced class weight
+2. Temporal models:
+   - train Logistic Regression บน Extract Set 1/2/3
+   - ใช้ `class_weight="balanced"` เป็น default
+3. Optional comparator models:
+   - Random Forest
+   - XGBoost
+   - ใช้เพื่อดู nonlinear patterns แต่ไม่แทน Logistic Regression baseline
+4. Cross-validation:
+   - default ตาม paper คือ LOOCV
+   - ถ้า computational cost สูง ให้ใช้ patient-level stratified CV และระบุว่าเป็น deviation จาก paper
+5. Threshold handling:
+   - เก็บ predicted probability
+   - รายงาน metrics ที่ threshold default 0.5
+   - ทำ threshold analysis ใน validation stage ถ้าจำเป็น
 
-1. แบ่ง train/test ระดับคนไข้โดยใช้ stratification ตาม `stroke_3m`
-2. สร้าง preprocessing pipeline เช่น imputation, missing indicator, scaling หรือ encoding ตามชนิดโมเดล
-3. สร้าง baseline model เช่น Logistic Regression
-4. Train โมเดล tree-based เช่น RandomForest และ XGBoost
-5. ใช้ Stratified K-Fold CV บน train set
-6. จัดการ class imbalance เช่น class weight, scale_pos_weight หรือ threshold tuning
-7. ประเมิน holdout test set หลังเลือก workflow จาก train/CV แล้ว
+## Output
 
-## Outputs
+- Model predictions ต่อ patient
+- Predicted probability
+- Predicted class
+- Model configuration log
+- CV fold assignment หรือ LOOCV prediction table
+- Baseline vs temporal model comparison inputs สำหรับ Stage 08
 
-- Model pipeline objects หรือ scripts
-- CV metrics
-- Holdout metrics
-- Confusion matrix และ classification report
-- Model comparison table
+## Checks / Acceptance Criteria
 
-## Checks
+- Train/test split หรือ CV ต้อง split ระดับ patient ไม่ใช่ record
+- ไม่มี patient เดียวกันอยู่ทั้ง train และ test ใน fold เดียวกัน
+- Baseline model ใช้ single-shot features เท่านั้น
+- Temporal model ใช้ Extract Set 1/2/3 ตามนิยาม
+- Logistic Regression ใช้ `class_weight="balanced"`
+- Predictions ทุก model ต้อง map กลับไปที่ patient id ได้
 
-- Preprocessing ต้องอยู่ใน pipeline เพื่อ fit เฉพาะ train fold
-- Test set ใช้ครั้งสุดท้ายสำหรับประเมินเท่านั้น
-- ห้ามให้ `hn` เดียวกันอยู่ทั้ง train และ test
-- รายงาน ROC-AUC และ PR-AUC เพราะ positive class มีน้อย
-- ตรวจ precision, recall และ threshold ไม่ใช้ accuracy อย่างเดียว
+## Relation to Paper
+
+Paper ใช้ Logistic Regression with `class_weight="balanced"` และ LOOCV เพราะข้อมูล imbalance สูงและต้องการ patient-level independence Stage นี้จึงใช้แนวทางเดียวกันเป็น default
+

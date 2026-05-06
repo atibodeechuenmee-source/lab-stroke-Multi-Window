@@ -1,41 +1,63 @@
-# Validation
+# Stage 08: Validation
 
-## Goal
+## Purpose
 
-ตรวจว่าโมเดลทำงานได้จริงบนข้อมูลที่ไม่เคยเห็น และประเมินความเสี่ยงก่อนนำผลไปใช้ตัดสินใจหรือรายงาน
+ประเมิน model performance อย่างเหมาะสมกับ imbalanced stroke prediction และตรวจว่าการใช้ temporal features ดีกว่า single-shot baseline อย่างมีนัยสำคัญหรือไม่
 
-validation หลักต้องเป็น patient-level validation ของ target `stroke_3m`
+## Input
 
-## Inputs
+- Patient-level labels จาก Stage 02
+- Predictions จาก baseline และ temporal models จาก Stage 06
+- Feature selection/PCA results จาก Stage 07
+- Cohort attrition และ EDA summaries จาก Stage 02/04
 
-- Trained patient-level model
-- Holdout test set
-- CV metrics
-- Feature importance/SHAP outputs
+## Process
 
-## Steps
+1. Performance metrics:
+   - sensitivity
+   - specificity
+   - G-Mean
+   - ROC-AUC optional
+   - PR-AUC optional
+2. G-Mean เป็น metric หลัก:
 
-1. สรุป holdout metrics เช่น ROC-AUC, PR-AUC, precision, recall, F1
-2. ตรวจ confusion matrix ที่ threshold หลัก เช่น 0.5
-3. ทำ threshold tuning ถ้าต้องการเน้น recall หรือ precision
-4. ตรวจ calibration ถ้าต้องใช้ predicted probability
-5. ทำ sensitivity analysis เช่น horizon 90 วัน เทียบกับ horizon อื่น ถ้าจำเป็น
-6. ทำ leakage audit ของ feature list และ preprocessing steps
-7. สรุป limitation ของ dataset, target definition, missing data และ model performance
+```text
+G-Mean = sqrt(Sensitivity * Specificity)
+```
 
-## Outputs
+3. Baseline comparison:
+   - เปรียบเทียบ single-shot baseline กับ Extract Set 1/2/3
+   - เปรียบเทียบ no reduction, ANOVA, PCA, ANOVA+PCA
+4. McNemar's test:
+   - ใช้ paired predictions ของ baseline และ temporal model
+   - รายงาน disagreement counts, chi-square และ p-value
+5. Leakage audit:
+   - ตรวจว่า validation predictions มาจาก features ก่อน reference date เท่านั้น
+   - ตรวจว่า feature selection/PCA fit เฉพาะ training folds
+6. Cohort attrition review:
+   - รายงานจำนวน patients ก่อน/หลัง completeness criteria
+   - ระบุผลกระทบของ strict temporal windows ต่อ sample size
+
+## Output
 
 - Validation report
-- Holdout metric table
-- Threshold analysis
-- Calibration summary ถ้ามี
-- Leakage audit checklist
-- Final model recommendation
+- Confusion matrix ต่อ model
+- Sensitivity/specificity/G-Mean table
+- ROC-AUC/PR-AUC table ถ้ามี
+- McNemar's test report
+- Leakage audit report
+- Cohort attrition report
 
-## Checks
+## Checks / Acceptance Criteria
 
-- Validation ต้องไม่ใช้ข้อมูลที่ถูกใช้เลือก preprocessing/model โดยตรง
-- Validation ต้องประเมิน `stroke_3m` ระดับคนไข้ ไม่ใช่ `stroke_flag` ระดับ record
-- PR-AUC สำคัญมากเมื่อ positive class น้อย
-- ตรวจ recall ของ stroke class แยกจาก overall accuracy
-- รายงานข้อจำกัดก่อนสรุปว่าโมเดลพร้อมใช้งาน
+- ทุก model มี sensitivity, specificity และ G-Mean
+- รายงาน single-shot baseline แยกจาก temporal models
+- มี McNemar's test อย่างน้อยหนึ่งคู่: best temporal model vs single-shot baseline
+- ไม่มี metric ที่คำนวณจาก post-reference features
+- ระบุ model ที่ดีที่สุดด้วย G-Mean ไม่ใช่ accuracy อย่างเดียว
+- รายงานข้อจำกัดจาก class imbalance และ sample size
+
+## Relation to Paper
+
+Paper ใช้ G-Mean เพราะข้อมูล imbalance สูง และใช้ McNemar's test เพื่อพิสูจน์ว่า temporal model ดีกว่า baseline อย่างมีนัยสำคัญ Stage นี้จึงทำหน้าที่เป็น evidence layer ของ pipeline
+

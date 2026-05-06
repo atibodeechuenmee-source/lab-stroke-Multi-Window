@@ -1,0 +1,3 @@
+﻿diagnosis_role,column,status,non_null_count,stroke_code_record_count,example_stroke_codes
+principal,PrincipleDiagnosis,available,218770,3471,I64; I64; I64; I64; I64; I64; I64; I64; I64; I64
+comorbidity,ComorbidityDiagnosis,available,160014,479,I64; I64; I64; I64; I64; I64; I64; I64; I64; I64

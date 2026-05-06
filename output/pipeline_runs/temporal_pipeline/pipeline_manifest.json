@@ -1,0 +1,10 @@
+{
+  "raw_path": "data\\raw\\patients_with_tc_hdl_ratio_with_drugflag.xlsx",
+  "output_dir": "output\\pipeline_runs\\temporal_pipeline",
+  "raw_rows": 218772,
+  "cleaned_rows": 202939,
+  "patients": 13635,
+  "pre_reference_rows": 194231,
+  "temporal_complete_patients": 13,
+  "skip_modeling": true
+}

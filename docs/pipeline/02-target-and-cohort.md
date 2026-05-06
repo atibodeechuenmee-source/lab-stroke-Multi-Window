@@ -1,37 +1,54 @@
-# Target & Cohort Definition
+# Stage 02: Target and Cohort
 
-## Goal
+## Purpose
 
-นิยาม outcome และประชากรที่ใช้วิเคราะห์ให้ชัดเจนก่อน cleaning, EDA และ modeling เพื่อลด ambiguity และป้องกัน leakage
+สร้าง patient-level cohort และ target variable สำหรับ stroke-risk prediction โดยกำหนด `reference date` อย่างชัดเจน และตัด records หลัง reference date เพื่อป้องกัน data leakage
 
-target หลักของโจทย์นี้คือ `stroke_3m` ระดับคนไข้: คนไข้มี primary stroke diagnosis ภายใน 90 วันหลัง index date หรือไม่
+## Input
 
-## Inputs
+- Raw หรือ lightly standardized EHR records จาก Stage 01
+- Patient id
+- Visit date
+- ICD-10 diagnosis fields
+- Core clinical variables สำหรับ temporal feature extraction
 
-- Raw data
-- `hn` สำหรับ patient id
-- `vstdate` สำหรับ timeline
-- `PrincipleDiagnosis` สำหรับนิยาม stroke outcome
+## Process
 
-## Steps
+1. ระบุ stroke event จาก ICD-10 codes `I60-I68`
+2. สร้าง patient-level stroke label:
+   - `stroke = 1` ถ้าผู้ป่วยมี ICD-10 `I60-I68` อย่างน้อยหนึ่งครั้ง
+   - `stroke = 0` ถ้าไม่พบ stroke event ใน records
+3. กำหนด `reference date`:
+   - stroke patient: วันที่เกิด stroke ครั้งแรก
+   - non-stroke patient: วันที่ visit ล่าสุด
+4. ลบ records ที่เกิดหลัง `reference date`
+5. สร้าง temporal windows:
+   - FIRST: 21-9 เดือนก่อน reference date
+   - MID: 18-6 เดือนก่อน reference date
+   - LAST: 15-3 เดือนก่อน reference date
+6. ตรวจ temporal completeness:
+   - ต้องมีอย่างน้อย 1 visit ในทุก window
+   - core clinical variables ต้องมีครบในทุก window สำหรับ temporal feature extraction
+7. สร้าง cohort attrition table เพื่อแสดงจำนวน patient ที่ถูกคัดออกในแต่ละเงื่อนไข
 
-1. แปลง `vstdate` เป็น datetime ด้วย invalid date เป็น missing
-2. สร้าง `stroke_flag` เป็น event marker ระดับแถวจาก `PrincipleDiagnosis` ที่เป็น ICD-10 ช่วง `I60-I69*`
-3. ใช้ `stroke_flag` เพื่อหา stroke event date แรกของแต่ละคน
-4. กำหนด index date, event date, และ horizon 90 วันสำหรับ patient-level 90-day prediction
-5. สร้าง target หลัก `stroke_3m` ระดับคนไข้
-6. ตัดข้อมูลหลัง index date ออกจาก feature source ใน patient-level workflow
+## Output
 
-## Outputs
+- Patient-level cohort table
+- Patient id, stroke label, reference date
+- Pre-reference records เท่านั้น
+- Window assignment สำหรับแต่ละ record
+- Cohort attrition report
+- Temporal completeness flags
 
-- Event marker ระดับแถว: `stroke_flag`
-- Target หลักระดับคนไข้: `stroke_3m`
-- Cohort summary เช่น จำนวน patients, records, positives, negatives, prevalence
-- Exclusion summary สำหรับ record/patient ที่ไม่เข้าเงื่อนไข
+## Checks / Acceptance Criteria
 
-## Checks
+- ไม่มี record ที่ visit date มากกว่า reference date ใน output
+- Stroke patient ทุกคนมี reference date เป็น first stroke date เท่านั้น
+- Non-stroke patient ทุกคนมี reference date เป็น last visit date
+- ทุก patient ที่ผ่าน final cohort มี FIRST, MID, LAST ครบ
+- รายงานจำนวน excluded patients แยกตามเหตุผลได้
 
-- ไม่ใช้ `PrincipleDiagnosis` เป็น model feature เพราะใช้สร้าง target
-- ไม่ใช้ diagnosis/text หลัง index date เป็น feature
-- ตรวจ class imbalance ของ `stroke_3m` เป็นหลัก
-- ตรวจว่าผู้ป่วย positive มี event ภายใน horizon ที่กำหนดจริง
+## Relation to Paper
+
+Stage นี้เป็นแกนหลักของ paper เพราะ paper สร้าง temporal representation จาก three retrospective windows และใช้ strict completeness criteria ก่อน model training
+

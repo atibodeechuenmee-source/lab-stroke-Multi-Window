@@ -1,33 +1,57 @@
-# Data Cleaning
+# Stage 03: Data Cleaning
 
-## Goal
+## Purpose
 
-ทำให้ข้อมูลมีรูปแบบพร้อมใช้งานและลด error จาก missing, type mismatch, duplicate, invalid values และ outliers โดยยังรักษาสัญญาณทางคลินิกที่สำคัญไว้
+ทำความสะอาดข้อมูล clinical records ที่ผ่าน cohort rules แล้ว เพื่อให้พร้อมสำหรับ EDA และ feature engineering โดยรักษาหลักการไม่ใช้ post-reference data
 
-## Inputs
+## Input
 
-- Raw data พร้อม target/cohort definition
-- Schema summary และ missing summary จากขั้นตอน raw data/EDA
+- Pre-reference records จาก Stage 02
+- Patient-level cohort table
+- Raw schema summary จาก Stage 01
+- Column mapping และ expected units
 
-## Steps
+## Process
 
-1. แปลงชนิดข้อมูลให้ถูกต้อง เช่น date, numeric labs/vitals, binary flags
-2. ตรวจ duplicate rows และ duplicate patient-visit records
-3. จัดการ missing values แยกตามชนิดข้อมูล เช่น demographic, vitals, labs, medication flags
-4. กำหนด rule สำหรับ impossible values เช่น อายุหรือน้ำหนักที่ผิดธรรมชาติ
-5. ตรวจ outliers ของ lab/vital values และตัดสินใจว่าจะ keep, cap, set missing, หรือ exclude
-6. บันทึก cleaning log ว่ามี rows/values ถูกแก้หรือ exclude เท่าไร
+1. De-identification:
+   - เก็บเฉพาะ anonymized patient id หรือ `HN` ที่จำเป็น
+   - ไม่ส่งออก personally identifiable information
+2. Standardization:
+   - แปลง date format ให้เป็นมาตรฐานเดียว
+   - standardize column names
+   - standardize measurement units
+3. Duplicate handling:
+   - ตรวจ duplicate records ตาม patient id, visit date, diagnosis และ lab values
+   - กำหนด rule ว่าจะ drop exact duplicates เท่านั้น
+4. Implausible value handling:
+   - ตรวจค่าที่เป็นไปไม่ได้ เช่น blood pressure ติดลบ, HDL เป็นศูนย์, creatinine ติดลบ
+   - แทนค่าผิดปกติด้วย missing value และบันทึกลง cleaning log
+5. Binary flag encoding:
+   - smoking, drinking, AF, diabetes, hypertension, heart disease
+   - statin flag และ antihypertensive flag
+   - ใช้ encoding `{0, 1}` เป็น default
+6. Diagnosis normalization:
+   - normalize ICD-10 codes
+   - เก็บ principal และ comorbidity diagnosis ในรูปแบบที่ตรวจซ้ำได้
 
-## Outputs
+## Output
 
-- Cleaned dataset หรือ cleaning-ready dataframe
-- Cleaning rules document
-- Cleaning log summary
-- Missing/outlier summary หลัง cleaning
+- Cleaned pre-reference records
+- Cleaning report
+- Missing summary after cleaning
+- Range summary after cleaning
+- Binary flag encoding map
+- Diagnosis normalization report
 
-## Checks
+## Checks / Acceptance Criteria
 
-- Imputer, scaler, encoder หรือ threshold ที่เรียนรู้จาก distribution ต้อง fit จาก train set เท่านั้น
-- Outlier rule ต้องไม่ใช้ target ในการตัดสินใจโดยตรง
-- ไม่ลบ positive class มากเกินไปโดยไม่รายงานผลกระทบ
-- เก็บ missing indicator เมื่อ missing pattern อาจมีความหมายทางคลินิก
+- ไม่มี personally identifiable information ที่ไม่จำเป็นใน output
+- Date columns เป็น type ที่ใช้คำนวณ window ได้
+- Binary flags มีค่าเฉพาะ `0`, `1` หรือ missing ก่อน imputation/aggregation
+- ไม่มี implausible values ที่ควรถูก flag ค้างอยู่โดยไม่บันทึกเหตุผล
+- ยืนยันอีกครั้งว่า output ยังไม่มี post-reference records
+
+## Relation to Paper
+
+Paper ระบุ preprocessing เช่น de-identification, harmonized dates/units/variables, implausible value handling, binary encoding และ ICD-10 normalization ก่อนสร้าง temporal features
+

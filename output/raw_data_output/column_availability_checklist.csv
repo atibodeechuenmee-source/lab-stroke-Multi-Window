@@ -1,28 +1,30 @@
-﻿group,column,available,note
-patient_id,hn,True,present
-timeline,vstdate,True,present
-target,PrincipleDiagnosis,True,present
-demographic,sex,True,present
-demographic,age,True,present
-demographic,height,True,present
-demographic,bw,True,present
-demographic,bmi,True,present
-vitals,bps,True,present
-vitals,bpd,True,present
-labs,HDL,True,present
-labs,LDL,True,present
-labs,Triglyceride,True,present
-labs,Cholesterol,True,present
-labs,FBS,True,present
-labs,eGFR,True,present
-labs,Creatinine,True,present
-labs,TC:HDL_ratio,True,present
-behavior_flags,smoke,True,present
-behavior_flags,drinking,True,present
-comorbidity_flags,AF,True,present
-comorbidity_flags,heart_disease,True,present
-comorbidity_flags,hypertension,True,present
-comorbidity_flags,diabetes,True,present
-medication_flags,Statin,True,present
-medication_flags,Gemfibrozil,True,present
-medication_flags,Antihypertensive_flag,True,present
+﻿required_field,status,matched_column,candidate_columns
+patient_identifier,available,hn,"hn, HN, patient_id"
+visit_date,available,vstdate,"vstdate, visit_date, service_date"
+principal_diagnosis,available,PrincipleDiagnosis,"PrincipleDiagnosis, PrincipalDiagnosis, principal_diagnosis"
+comorbidity_diagnosis,available,ComorbidityDiagnosis,"ComorbidityDiagnosis, comorbidity_diagnosis"
+sex,available,sex,sex
+age,available,age,age
+height,available,height,height
+body_weight,available,bw,"bw, weight"
+bmi,available,bmi,"bmi, BMI"
+smoking,available,smoke,"smoke, smoking"
+drinking,available,drinking,"drinking, alcohol"
+systolic_bp,available,bps,"bps, BPS"
+diastolic_bp,available,bpd,"bpd, BPD"
+hdl,available,HDL,"HDL, hdl"
+ldl,available,LDL,"LDL, ldl"
+triglyceride,available,Triglyceride,"Triglyceride, triglyceride"
+total_cholesterol,available,Cholesterol,"Cholesterol, cholesterol, total_cholesterol"
+atrial_fibrillation,available,AF,"AF, af"
+fasting_blood_sugar,available,FBS,"FBS, fbs"
+egfr,available,eGFR,"eGFR, egfr"
+creatinine,available,Creatinine,"Creatinine, creatinine"
+medication,available,ยาที่ได้รับ,"ยาที่ได้รับ, medication, drug"
+heart_disease,available,heart_disease,heart_disease
+hypertension,available,hypertension,hypertension
+diabetes,available,diabetes,diabetes
+statin,available,Statin,"Statin, statin"
+gemfibrozil,available,Gemfibrozil,"Gemfibrozil, gemfibrozil"
+tc_hdl_ratio,available,TC:HDL_ratio,"TC:HDL_ratio, TC_HDL_ratio, tc_hdl_ratio"
+antihypertensive_flag,available,Antihypertensive_flag,"Antihypertensive_flag, antihypertensive_flag"

@@ -1,1 +1,2 @@
-"""Source package for the lab-stroke project."""
+"""Stroke-risk temporal pipeline package."""
+

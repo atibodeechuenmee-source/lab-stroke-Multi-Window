@@ -1,7 +1,13 @@
 """Stage 01 raw data audit for the temporal stroke pipeline.
 
-This module implements docs/pipeline/01-raw-data.md. It only reads the
-raw file and writes audit outputs; it never edits or overwrites raw data.
+โมดูลนี้ทำหน้าที่ "สำรวจคุณภาพข้อมูลดิบ" เท่านั้น:
+1) อ่านไฟล์ raw
+2) สรุป schema/missing/range/coverage/ICD availability
+3) เขียนรายงานและตารางตรวจสอบ
+
+ข้อสำคัญ:
+- ห้ามแก้ไฟล์ raw ต้นทาง
+- ใช้ผลจาก Stage 01 เป็น checkpoint ก่อนเข้า Stage 02/03
 """
 
 from __future__ import annotations
@@ -79,6 +85,7 @@ RANGE_CHECKS = {
 
 
 def load_raw_data(path: Path) -> pd.DataFrame:
+    """รองรับการอ่านไฟล์ดิบจาก Excel/CSV."""
     suffix = path.suffix.lower()
     if suffix in {".xlsx", ".xls"}:
         return pd.read_excel(path)
@@ -98,6 +105,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def first_existing(columns: set[str], candidates: list[str]) -> str | None:
+    """คืนชื่อคอลัมน์ตัวแรกที่เจอจาก candidate list."""
     for candidate in candidates:
         if candidate in columns:
             return candidate
@@ -109,6 +117,7 @@ def build_column_list(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_schema_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """สรุปชนิดข้อมูล จำนวนค่าว่าง และตัวอย่างค่า ต่อคอลัมน์."""
     rows = []
     total_rows = len(df)
     for column in df.columns:
@@ -133,6 +142,7 @@ def build_missing_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_column_availability(df: pd.DataFrame) -> pd.DataFrame:
+    """ตรวจว่า expected fields ตามสเปก pipeline มีอยู่จริงหรือไม่."""
     columns = set(map(str, df.columns))
     rows = []
     for required_field, candidates in EXPECTED_COLUMNS.items():
@@ -149,6 +159,7 @@ def build_column_availability(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_visit_coverage(df: pd.DataFrame, config: RawDataConfig) -> pd.DataFrame:
+    """คำนวณจำนวน visit และช่วงติดตามต่อผู้ป่วย."""
     if config.patient_id_col not in df.columns or config.visit_date_col not in df.columns:
         return pd.DataFrame()
     visits = df[[config.patient_id_col, config.visit_date_col]].copy()
@@ -168,6 +179,7 @@ def build_visit_coverage(df: pd.DataFrame, config: RawDataConfig) -> pd.DataFram
 
 
 def build_range_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """ตรวจค่าที่ต่ำ/สูงเกิน plausible range แบบไม่แก้ข้อมูล."""
     rows = []
     for column, (low, high) in RANGE_CHECKS.items():
         if column not in df.columns:
@@ -193,6 +205,7 @@ def _contains_stroke_code(series: pd.Series) -> pd.Series:
 
 
 def build_icd_availability(df: pd.DataFrame, config: RawDataConfig) -> pd.DataFrame:
+    """ตรวจความพร้อมของคอลัมน์ diagnosis และจำนวน hit ของรหัส I60-I68."""
     rows = []
     for diagnosis_role, column in {
         "principal": config.principal_dx_col,
@@ -290,6 +303,13 @@ Stage 01 does not clean, drop, overwrite, or mutate the raw source file. It only
 
 
 def run_raw_data_audit(config: RawDataConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 01.
+
+    ลำดับงาน:
+    1) อ่านข้อมูลดิบ
+    2) สร้างตาราง audit ทุกมุม
+    3) เขียน artifact ลง output โดยไม่แตะต้องไฟล์ต้นทาง
+    """
     config.output_dir.mkdir(parents=True, exist_ok=True)
     df = load_raw_data(config.raw_path)
 
@@ -354,4 +374,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

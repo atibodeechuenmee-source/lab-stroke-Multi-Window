@@ -1,8 +1,10 @@
 """Stage 04 exploratory data analysis for temporal stroke prediction.
 
-Implements docs/pipeline/04-eda.md. The stage reads cleaned pre-reference
-records plus patient-level cohort/completeness outputs and writes summary
-tables/reports without using post-reference data.
+วัตถุประสงค์:
+1) สรุปโครงข้อมูลและ class imbalance
+2) วิเคราะห์ missingness/visit coverage/temporal coverage
+3) สร้าง leakage audit summary
+4) เตรียมหลักฐานเชิงข้อมูลสำหรับ Stage 05-08
 """
 
 from __future__ import annotations
@@ -62,6 +64,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def class_imbalance(cohort: pd.DataFrame) -> pd.DataFrame:
+    """สรุปจำนวน stroke vs non-stroke ระดับผู้ป่วย."""
     counts = cohort["stroke"].value_counts(dropna=False).rename_axis("stroke").reset_index(name="patient_count")
     counts["label"] = counts["stroke"].map({0: "non_stroke", 1: "stroke"}).fillna("missing")
     counts["percent"] = counts["patient_count"] / counts["patient_count"].sum()
@@ -69,6 +72,7 @@ def class_imbalance(cohort: pd.DataFrame) -> pd.DataFrame:
 
 
 def visit_frequency(records: pd.DataFrame, config: EDAConfig) -> pd.DataFrame:
+    """สรุปจำนวน visit และช่วงเวลาติดตามต่อผู้ป่วย."""
     grouped = records.groupby(config.patient_id_col)[config.visit_date_col]
     summary = grouped.agg(["count", "min", "max"]).reset_index()
     summary = summary.rename(columns={"count": "visit_count", "min": "first_visit_date", "max": "last_visit_date"})
@@ -94,6 +98,7 @@ def visit_frequency_distribution(coverage: pd.DataFrame) -> pd.DataFrame:
 
 
 def window_visit_counts(records: pd.DataFrame, config: EDAConfig) -> pd.DataFrame:
+    """นับจำนวน visit ต่อ patient ต่อ window."""
     if "window" not in records.columns:
         return pd.DataFrame()
     table = (
@@ -107,6 +112,7 @@ def window_visit_counts(records: pd.DataFrame, config: EDAConfig) -> pd.DataFram
 
 
 def time_gap_summary(records: pd.DataFrame, config: EDAConfig) -> pd.DataFrame:
+    """สรุปช่องว่างเวลา (days) ระหว่าง visit ต่อเนื่อง."""
     sorted_records = records.sort_values([config.patient_id_col, config.visit_date_col]).copy()
     sorted_records["days_since_previous_visit"] = (
         sorted_records.groupby(config.patient_id_col)[config.visit_date_col].diff().dt.days
@@ -129,6 +135,7 @@ def time_gap_summary(records: pd.DataFrame, config: EDAConfig) -> pd.DataFrame:
 
 
 def missingness_by_variable(records: pd.DataFrame) -> pd.DataFrame:
+    """สรุป missingness ต่อคอลัมน์."""
     rows = []
     for column in records.columns:
         rows.append(
@@ -142,6 +149,7 @@ def missingness_by_variable(records: pd.DataFrame) -> pd.DataFrame:
 
 
 def missingness_by_group(records: pd.DataFrame, group_col: str) -> pd.DataFrame:
+    """สรุป missingness แยกตามกลุ่ม เช่น stroke/window."""
     if group_col not in records.columns:
         return pd.DataFrame()
     rows = []
@@ -162,6 +170,7 @@ def missingness_by_group(records: pd.DataFrame, group_col: str) -> pd.DataFrame:
 
 
 def temporal_coverage(completeness: pd.DataFrame, attrition: pd.DataFrame | None = None) -> pd.DataFrame:
+    """สรุปความครอบคลุมของ FIRST/MID/LAST และผล attrition."""
     rows = []
     if completeness.empty:
         return pd.DataFrame()
@@ -199,6 +208,7 @@ def temporal_coverage(completeness: pd.DataFrame, attrition: pd.DataFrame | None
 
 
 def clinical_descriptive_stats(records: pd.DataFrame) -> pd.DataFrame:
+    """คำนวณ descriptive stats ของตัวแปรคลินิกทั้งรวมและแยก stroke."""
     rows = []
     group_cols = ["stroke"] if "stroke" in records.columns else []
     for column in NUMERIC_CLINICAL_COLUMNS:
@@ -229,6 +239,7 @@ def _describe_series(column: str, series: pd.Series, stroke_value: object) -> di
 
 
 def leakage_audit(records: pd.DataFrame, config: EDAConfig) -> pd.DataFrame:
+    """ตรวจหลักฐานว่ามี/ไม่มี post-reference records."""
     rows = []
     if config.visit_date_col in records.columns and config.reference_date_col in records.columns:
         valid = records[[config.visit_date_col, config.reference_date_col]].dropna()
@@ -295,6 +306,7 @@ Strict FIRST/MID/LAST completeness leaves very few temporal-complete patients in
 
 
 def run_eda(config: EDAConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 04."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     records = load_csv(config.records_path, parse_dates=[config.visit_date_col, config.reference_date_col])
     cohort = load_csv(config.cohort_path)
@@ -374,4 +386,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

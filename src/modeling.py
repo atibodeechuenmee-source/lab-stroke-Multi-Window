@@ -1,8 +1,14 @@
 """Stage 06 modeling for temporal stroke-risk prediction.
 
-Implements docs/pipeline/06-modeling.md. Trains Logistic Regression with
-balanced class weights on patient-level feature tables and writes patient
-predictions, model configuration, and CV metrics.
+งานหลัก:
+1) โหลด feature tables จาก Stage 05
+2) train/evaluate Logistic Regression (class_weight="balanced")
+3) ใช้ patient-level CV และบันทึก prediction ต่อ fold
+4) รายงาน metrics โดยเน้น G-Mean
+
+ข้อกำกับ:
+- baseline single_shot ต้องมีเสมอ
+- ตรวจ train/test patient overlap เพื่อกัน leakage
 """
 
 from __future__ import annotations
@@ -47,6 +53,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def load_feature_tables(config: ModelingConfig) -> dict[str, pd.DataFrame]:
+    """โหลด feature tables ที่มีอยู่จริงใน output ของ Stage 05."""
     tables = {}
     for model_name, filename in FEATURE_FILES.items():
         path = config.feature_dir / filename
@@ -58,6 +65,7 @@ def load_feature_tables(config: ModelingConfig) -> dict[str, pd.DataFrame]:
 
 
 def numeric_feature_matrix(table: pd.DataFrame, config: ModelingConfig) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
+    """เตรียม X/y โดยใช้เฉพาะคอลัมน์ตัวเลขสำหรับโมเดล."""
     required = [config.patient_id_col, config.target_col]
     missing = [column for column in required if column not in table.columns]
     if missing:
@@ -71,6 +79,7 @@ def numeric_feature_matrix(table: pd.DataFrame, config: ModelingConfig) -> tuple
 
 
 def choose_cv(y: pd.Series, config: ModelingConfig):
+    """เลือก CV strategy ตาม class distribution และขนาดข้อมูล."""
     from sklearn.model_selection import LeaveOneOut, StratifiedKFold
 
     class_counts = y.value_counts()
@@ -86,6 +95,7 @@ def choose_cv(y: pd.Series, config: ModelingConfig):
 
 
 def make_model(config: ModelingConfig):
+    """สร้าง pipeline มาตรฐานของ Stage 06."""
     from sklearn.impute import SimpleImputer
     from sklearn.linear_model import LogisticRegression
     from sklearn.pipeline import Pipeline
@@ -112,6 +122,7 @@ def g_mean(sensitivity: float, specificity: float) -> float:
 
 
 def evaluate_predictions(y_true: list[int], y_pred: list[int], y_prob: list[float]) -> dict[str, float | int]:
+    """คำนวณ confusion metrics และ ROC-AUC."""
     from sklearn.metrics import confusion_matrix, roc_auc_score
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
@@ -131,6 +142,7 @@ def evaluate_predictions(y_true: list[int], y_pred: list[int], y_prob: list[floa
 
 
 def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfig) -> tuple[pd.DataFrame, dict, dict]:
+    """เทรนและทำนายแบบ cross-validation สำหรับโมเดลหนึ่งชุด."""
     x, y, patient_ids = numeric_feature_matrix(table, config)
     cv, cv_name = choose_cv(y, config)
     base_config = {
@@ -144,6 +156,7 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
         "target_positive_count": int((y == 1).sum()),
         "target_negative_count": int((y == 0).sum()),
     }
+    # ถ้าข้อมูลไม่พร้อม (เช่น class เดียว) ให้ skip อย่างโปร่งใส
     if cv is None or x.empty:
         reason = cv_name if cv is None else "not_run_no_numeric_features"
         predictions = pd.DataFrame(
@@ -167,6 +180,7 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
     model = make_model(config)
     rows = []
     for fold_idx, (train_idx, test_idx) in enumerate(cv.split(x, y), start=1):
+        # patient-level leakage guard: ห้ามมีคนไข้ซ้ำระหว่าง train/test ใน fold เดียวกัน
         train_ids = set(patient_ids.iloc[train_idx])
         test_ids = set(patient_ids.iloc[test_idx])
         if train_ids & test_ids:
@@ -197,6 +211,7 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
 
 
 def run_modeling(config: ModelingConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 06."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     tables = load_feature_tables(config)
     all_predictions = []
@@ -212,6 +227,7 @@ def run_modeling(config: ModelingConfig) -> dict[str, object]:
             write_csv(predictions, config.output_dir / f"{model_name}_predictions.csv")
 
     metrics_df = pd.DataFrame(metrics_rows)
+    # จัดอันดับโมเดลด้วย G-Mean เพื่อสะท้อนสมดุล sensitivity/specificity
     if "g_mean" in metrics_df.columns:
         metrics_df = metrics_df.sort_values("g_mean", ascending=False, na_position="last")
     write_csv(metrics_df, config.output_dir / "model_cv_metrics.csv")
@@ -298,4 +314,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

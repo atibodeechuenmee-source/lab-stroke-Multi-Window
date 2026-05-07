@@ -1,8 +1,13 @@
 """Stage 05 feature engineering for temporal stroke-risk prediction.
 
-Implements docs/pipeline/05-feature-engineering.md. The stage creates a
-single-shot baseline and temporal Extract Set 1/2/3 feature tables from
-cleaned pre-reference records only.
+เป้าหมาย:
+1) สร้าง single-shot baseline (latest pre-reference)
+2) สร้าง temporal Extract Set 1/2/3 ตามแนว paper
+3) สร้าง feature dictionary และ exclusion report เพื่อ trace ได้
+
+ข้อกำกับสำคัญ:
+- ใช้เฉพาะข้อมูลก่อน reference date
+- temporal sets ใช้เฉพาะผู้ป่วยที่ผ่าน completeness criteria
 """
 
 from __future__ import annotations
@@ -80,6 +85,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def ensure_tc_hdl_ratio(records: pd.DataFrame) -> pd.DataFrame:
+    """สร้าง tc_hdl_ratio เมื่อคอลัมน์ยังไม่มีและข้อมูลเพียงพอ."""
     prepared = records.copy()
     if "tc_hdl_ratio" not in prepared.columns and {"cholesterol", "hdl"}.issubset(prepared.columns):
         prepared["tc_hdl_ratio"] = np.where(
@@ -96,6 +102,7 @@ def latest_non_null(series: pd.Series):
 
 
 def validate_pre_reference(records: pd.DataFrame, config: FeatureEngineeringConfig) -> bool:
+    """เช็ค invariant ว่าไม่มี record หลัง reference date."""
     if config.reference_date_col not in records.columns:
         return True
     valid = records[[config.visit_date_col, config.reference_date_col]].dropna()
@@ -103,6 +110,7 @@ def validate_pre_reference(records: pd.DataFrame, config: FeatureEngineeringConf
 
 
 def build_single_shot(records: pd.DataFrame, config: FeatureEngineeringConfig) -> tuple[pd.DataFrame, list[dict[str, str]]]:
+    """สร้าง baseline features จากระเบียนล่าสุดก่อน reference ต่อ patient."""
     sorted_records = records.sort_values([config.patient_id_col, config.visit_date_col])
     latest = sorted_records.groupby(config.patient_id_col).tail(1).copy()
     feature_cols = [
@@ -128,6 +136,7 @@ def build_single_shot(records: pd.DataFrame, config: FeatureEngineeringConfig) -
 
 
 def temporal_complete_patient_ids(records: pd.DataFrame, config: FeatureEngineeringConfig) -> tuple[set, pd.DataFrame]:
+    """คัด patient ที่มี visit+core numeric ครบทุก FIRST/MID/LAST."""
     rows = []
     available_numeric = [col for col in NUMERIC_COLUMNS.values() if col in records.columns]
     for patient_id, group in records.groupby(config.patient_id_col):
@@ -155,6 +164,7 @@ def base_patient_table(records: pd.DataFrame, patient_ids: set, config: FeatureE
 
 
 def add_window_means(table: pd.DataFrame, records: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, str]]]:
+    """Extract Set 1: เพิ่มค่าเฉลี่ยของตัวแปรเชิงตัวเลขต่อ window."""
     dictionary = []
     result = table.copy()
     for window in WINDOWS:
@@ -178,6 +188,7 @@ def add_window_means(table: pd.DataFrame, records: pd.DataFrame) -> tuple[pd.Dat
 
 
 def add_latest_categorical(table: pd.DataFrame, records: pd.DataFrame, feature_set: str) -> tuple[pd.DataFrame, list[dict[str, str]]]:
+    """เพิ่ม latest categorical flags (ใช้ได้ทั้ง set1 และ setอื่น)."""
     result = table.copy()
     dictionary = []
     sorted_records = records.sort_values(["patient_id", "visit_date"])
@@ -201,6 +212,7 @@ def add_latest_categorical(table: pd.DataFrame, records: pd.DataFrame, feature_s
 
 
 def add_statistical_descriptors(table: pd.DataFrame, records: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, str]]]:
+    """Extract Set 2: เพิ่ม min/max/std/first/last/count ต่อ window."""
     result = table.copy()
     dictionary = []
     aggregations = {
@@ -234,6 +246,7 @@ def add_statistical_descriptors(table: pd.DataFrame, records: pd.DataFrame) -> t
 
 
 def add_temporal_descriptors(table: pd.DataFrame, records: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, str]]]:
+    """Extract Set 2: เพิ่ม temporal change features ระหว่าง FIRST กับ LAST."""
     result = table.copy()
     dictionary = []
     first_records = records[records["window"] == "FIRST"]
@@ -243,6 +256,7 @@ def add_temporal_descriptors(table: pd.DataFrame, records: pd.DataFrame) -> tupl
             continue
         first_mean = first_records.groupby("patient_id")[col].mean()
         last_mean = last_records.groupby("patient_id")[col].mean()
+        # delta และ slope ช่วยจับแนวโน้มการเปลี่ยนแปลงตามเวลา
         delta = (last_mean - first_mean).rename(f"{name}_delta_last_first")
         slope = (delta / (WINDOW_MONTH_CENTERS["FIRST"] - WINDOW_MONTH_CENTERS["LAST"])).rename(
             f"{name}_slope_last_first"
@@ -286,6 +300,7 @@ def add_temporal_descriptors(table: pd.DataFrame, records: pd.DataFrame) -> tupl
 
 
 def add_risk_factors(table: pd.DataFrame, records: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, str]]]:
+    """Extract Set 3: เพิ่ม risk-factor/latest medication-related flags."""
     result = table.copy()
     dictionary = []
     sorted_records = records.sort_values(["patient_id", "visit_date"])
@@ -309,8 +324,10 @@ def add_risk_factors(table: pd.DataFrame, records: pd.DataFrame) -> tuple[pd.Dat
 
 
 def build_feature_sets(records: pd.DataFrame, config: FeatureEngineeringConfig) -> dict[str, pd.DataFrame | list[dict[str, str]]]:
+    """ประกอบ single_shot + extract_set_1/2/3 พร้อม dictionary."""
     records = ensure_tc_hdl_ratio(records)
     complete_ids, completeness = temporal_complete_patient_ids(records, config)
+    # temporal features ใช้เฉพาะผู้ป่วยที่ผ่าน completeness และอยู่ใน 3 windows เท่านั้น
     temporal_records = records[records[config.patient_id_col].isin(complete_ids) & records["window"].isin(WINDOWS)].copy()
 
     single_shot, single_dict = build_single_shot(records, config)
@@ -339,6 +356,7 @@ def build_feature_sets(records: pd.DataFrame, config: FeatureEngineeringConfig) 
 
 
 def build_exclusion_report(records: pd.DataFrame, completeness: pd.DataFrame, config: FeatureEngineeringConfig) -> pd.DataFrame:
+    """รายงานเหตุผลที่ผู้ป่วยบางรายถูกตัดออกจาก temporal sets."""
     rows = []
     all_ids = set(records[config.patient_id_col].dropna().unique())
     complete_ids = set(completeness.loc[completeness["temporal_complete"], config.patient_id_col])
@@ -412,6 +430,7 @@ Single-shot baseline uses the latest pre-reference record for every patient. Tem
 
 
 def run_feature_engineering(config: FeatureEngineeringConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 05."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     records = load_records(config.records_path, config)
     no_post_reference = validate_pre_reference(records, config)
@@ -480,4 +499,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

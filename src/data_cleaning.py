@@ -1,8 +1,13 @@
 """Stage 03 data cleaning for pre-reference clinical records.
 
-Implements docs/pipeline/03-data-cleaning.md. This stage expects records
-that have already passed Stage 02 target/cohort rules, so it preserves the
-no-post-reference-data invariant while standardizing and auditing records.
+งานหลัก:
+1) มาตรฐานชื่อคอลัมน์และชนิดข้อมูล
+2) de-identification แบบไม่กระทบคอลัมน์ที่จำเป็นต่อ modeling
+3) จัดการ duplicate, diagnosis normalization, binary/range validation
+4) เก็บ cleaning log เพื่อ trace ได้ว่าแก้อะไรไปบ้าง
+
+ข้อกำกับ:
+- ต้องรักษา invariant จาก Stage 02: ห้ามมี post-reference data
 """
 
 from __future__ import annotations
@@ -126,6 +131,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def standardize_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """เปลี่ยนชื่อคอลัมน์ให้เป็นมาตรฐานเดียวทั้ง pipeline."""
     rename_map = {old: new for old, new in COLUMN_RENAME_MAP.items() if old in df.columns}
     cleaned = df.rename(columns=rename_map).copy()
     report = pd.DataFrame(
@@ -135,6 +141,7 @@ def standardize_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def deidentify(df: pd.DataFrame, drop_direct_identifiers: bool) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """ลบ direct/quasi identifiers ที่ไม่จำเป็นต่อการพยากรณ์."""
     if not drop_direct_identifiers:
         return df.copy(), pd.DataFrame(columns=["column", "action", "reason"])
     dropped = [column for column in DIRECT_IDENTIFIER_COLUMNS if column in df.columns]
@@ -153,6 +160,7 @@ def deidentify(df: pd.DataFrame, drop_direct_identifiers: bool) -> tuple[pd.Data
 
 
 def standardize_dates_and_types(df: pd.DataFrame) -> pd.DataFrame:
+    """แปลง date/numeric/binary columns ให้พร้อมใช้งานขั้นต่อไป."""
     cleaned = df.copy()
     for column in DATE_COLUMNS:
         if column in cleaned.columns:
@@ -167,6 +175,7 @@ def standardize_dates_and_types(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def normalize_diagnosis_value(value: object) -> str | float:
+    """ดึง ICD tokens ออกจากข้อความ diagnosis ให้เป็นรูปแบบสม่ำเสมอ."""
     if pd.isna(value):
         return np.nan
     tokens = ICD_TOKEN_PATTERN.findall(str(value).upper())
@@ -195,6 +204,7 @@ def normalize_diagnoses(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def drop_exact_duplicates(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """ลบแถวที่ซ้ำแบบ 1:1 เพื่อกันข้อมูลซ้ำเชิงเทคนิค."""
     before = len(df)
     cleaned = df.drop_duplicates().copy()
     report = pd.DataFrame(
@@ -211,6 +221,7 @@ def drop_exact_duplicates(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
 
 
 def apply_binary_encoding(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """คงเฉพาะ binary ที่ถูกต้อง (0/1) ค่าอื่นตั้งเป็น missing."""
     cleaned = df.copy()
     rows = []
     for column in BINARY_COLUMNS:
@@ -230,6 +241,7 @@ def apply_binary_encoding(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
 
 
 def apply_range_checks(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """ตรวจ plausible ranges และตั้งค่านอกช่วงเป็น missing พร้อม log."""
     cleaned = df.copy()
     summary_rows = []
     log_rows = []
@@ -280,6 +292,7 @@ def build_missing_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def check_no_post_reference_records(df: pd.DataFrame) -> bool | None:
+    """ยืนยันซ้ำว่า cleaned data ยังไม่หลุด post-reference."""
     if "visit_date" not in df.columns or "reference_date" not in df.columns:
         return None
     valid = df[["visit_date", "reference_date"]].dropna()
@@ -323,6 +336,7 @@ Stage 03 keeps patient id because it is required for patient-level feature engin
 
 
 def run_data_cleaning(config: DataCleaningConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 03."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     raw = load_records(config.input_path)
     rows_before = len(raw)
@@ -341,6 +355,7 @@ def run_data_cleaning(config: DataCleaningConfig) -> dict[str, object]:
     binary_invalid = int(binary_report["invalid_values_set_missing"].sum()) if not binary_report.empty else 0
     range_invalid = int(range_report["invalid_values_set_missing"].sum()) if not range_report.empty else 0
 
+    # รวม log จากหลายแหล่งให้ตรวจย้อนหลังได้ง่ายในไฟล์เดียว
     log_parts = []
     if not range_log.empty:
         log_parts.append(range_log)

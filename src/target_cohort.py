@@ -1,8 +1,11 @@
 """Stage 02 target and cohort construction.
 
-Implements docs/pipeline/02-target-and-cohort.md. The stage builds
-patient-level stroke labels, reference dates, pre-reference records,
-temporal window assignments, completeness flags, and attrition reports.
+โมดูลนี้แปลงข้อมูลระดับ visit ให้เป็นชุดวิเคราะห์ระดับ patient:
+1) กำหนด label stroke/non-stroke
+2) กำหนด reference date ตามกติกา paper
+3) ตัดข้อมูลหลัง reference date ทิ้งเพื่อกัน leakage
+4) จัด window FIRST/MID/LAST
+5) ประเมิน temporal completeness และ attrition
 """
 
 from __future__ import annotations
@@ -69,6 +72,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def _stroke_mask(df: pd.DataFrame, diagnosis_cols: list[str]) -> pd.Series:
+    """สร้าง boolean mask ว่าระเบียนไหนมีรหัส stroke I60-I68."""
     mask = pd.Series(False, index=df.index)
     for column in diagnosis_cols:
         if column in df.columns:
@@ -88,6 +92,7 @@ def validate_required_columns(df: pd.DataFrame, config: TargetCohortConfig) -> N
 
 
 def prepare_records(df: pd.DataFrame, config: TargetCohortConfig) -> pd.DataFrame:
+    """จัดประเภทข้อมูลเบื้องต้นและคัดทิ้งแถวที่ขาด patient/date."""
     validate_required_columns(df, config)
     prepared = df.copy()
     prepared[config.visit_date_col] = pd.to_datetime(prepared[config.visit_date_col], errors="coerce")
@@ -100,6 +105,12 @@ def prepare_records(df: pd.DataFrame, config: TargetCohortConfig) -> pd.DataFram
 
 
 def build_patient_cohort(records: pd.DataFrame, config: TargetCohortConfig) -> pd.DataFrame:
+    """สร้างตาราง cohort ระดับผู้ป่วยพร้อม target และ reference_date.
+
+    กติกา:
+    - stroke=1: reference_date = first_stroke_date
+    - stroke=0: reference_date = last_visit_date
+    """
     diagnosis_cols = [config.principal_dx_col, config.comorbidity_dx_col]
     working = records.copy()
     working["is_stroke_event"] = _stroke_mask(working, diagnosis_cols)
@@ -122,6 +133,7 @@ def build_patient_cohort(records: pd.DataFrame, config: TargetCohortConfig) -> p
 
 
 def assign_windows(months_before_reference: pd.Series) -> pd.Series:
+    """แมปเดือนก่อน reference date ไปยัง FIRST/MID/LAST window."""
     labels = pd.Series(pd.NA, index=months_before_reference.index, dtype="object")
     for window_name, (upper_month, lower_month) in WINDOWS.items():
         labels.loc[months_before_reference.between(lower_month, upper_month, inclusive="both")] = window_name
@@ -131,6 +143,7 @@ def assign_windows(months_before_reference: pd.Series) -> pd.Series:
 def build_pre_reference_records(
     records: pd.DataFrame, cohort: pd.DataFrame, config: TargetCohortConfig
 ) -> pd.DataFrame:
+    """ตัดเหลือ pre-reference records และคำนวณระยะห่างจาก reference."""
     merged = records.merge(
         cohort[[config.patient_id_col, "stroke", "reference_date", "reference_rule"]],
         on=config.patient_id_col,
@@ -146,6 +159,7 @@ def build_pre_reference_records(
 
 
 def build_temporal_completeness(pre_reference: pd.DataFrame, config: TargetCohortConfig) -> pd.DataFrame:
+    """ตรวจ completeness ราย patient ว่าผ่านเกณฑ์ทุก window หรือไม่."""
     available_core = [column for column in CORE_CLINICAL_COLUMNS if column in pre_reference.columns]
     rows: list[dict[str, object]] = []
     patients = pre_reference[config.patient_id_col].dropna().drop_duplicates()
@@ -177,6 +191,7 @@ def build_attrition_report(
     completeness: pd.DataFrame,
     config: TargetCohortConfig,
 ) -> pd.DataFrame:
+    """สรุปการลดลงของ sample size ในแต่ละจุดของ Stage 02."""
     initial_patients = records[config.patient_id_col].nunique() if config.patient_id_col in records.columns else 0
     prepared_patients = prepared[config.patient_id_col].nunique()
     post_reference_removed = len(prepared) - len(pre_reference)
@@ -237,6 +252,7 @@ def build_attrition_report(
 def build_quality_checks(
     cohort: pd.DataFrame, pre_reference: pd.DataFrame, completeness: pd.DataFrame, config: TargetCohortConfig
 ) -> dict[str, object]:
+    """ตรวจ invariant สำคัญ: ไม่มี post-reference และ reference rule ถูกต้อง."""
     no_post_reference = bool((pre_reference[config.visit_date_col] <= pre_reference["reference_date"]).all())
     stroke_reference_ok = bool(
         cohort.loc[cohort["stroke"] == 1, "first_stroke_date"].eq(
@@ -302,6 +318,7 @@ def build_markdown_report(report: dict[str, object], config: TargetCohortConfig)
 
 
 def run_target_cohort(config: TargetCohortConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 02."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     records = load_records(config.input_path)
     prepared = prepare_records(records, config)
@@ -349,4 +366,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

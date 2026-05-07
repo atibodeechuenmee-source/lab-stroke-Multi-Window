@@ -2,56 +2,68 @@
 
 ## Purpose
 
-ทำ EDA เพื่อประเมินความพร้อมของข้อมูลสำหรับ temporal stroke-risk prediction โดยเน้น class imbalance, missingness, visit coverage, temporal window coverage และความต่างระหว่าง stroke กับ non-stroke
+ตรวจข้อมูลหลัง cleaning เพื่อประเมินว่าสามารถทำตาม paper ได้มากแค่ไหน โดยเฉพาะ class imbalance, temporal coverage, missingness และผลกระทบของ completeness criteria
 
 ## Input
 
-- Cleaned pre-reference records จาก Stage 03
-- Patient-level cohort จาก Stage 02
-- Window assignment: FIRST, MID, LAST
+- `cleaned_pre_reference_records.csv` จาก Stage 03
+- `patient_level_cohort.csv` จาก Stage 02
+- `temporal_completeness_flags.csv` จาก Stage 02
+- `cohort_attrition_report.csv` จาก Stage 02
 
 ## Process
 
 1. Class imbalance:
-   - นับ stroke และ non-stroke patients
-   - รายงาน stroke prevalence หลัง cohort filtering
+   - จำนวน stroke patients
+   - จำนวน non-stroke patients
+   - stroke prevalence
 2. Visit frequency:
-   - จำนวน visits ต่อ patient
-   - จำนวน visits ต่อ temporal window
-   - distribution ของ time gap ระหว่าง visits
-3. Missingness:
-   - missing percent ราย variable
-   - missingness แยกตาม stroke/non-stroke
-   - missingness แยกตาม FIRST/MID/LAST
-4. Temporal coverage:
-   - จำนวน patient ที่ครบทุก window
-   - จำนวน patient ที่หลุดเพราะ window coverage ไม่พอ
-   - sensitivity note สำหรับ alternative windows เช่น 90/180 วัน
-5. Clinical distribution:
-   - distribution ของ BPS, BPD, HDL, LDL, FBS, BMI, eGFR, creatinine, total cholesterol, triglycerides
-   - เปรียบเทียบ stroke vs non-stroke
-6. Leakage audit เบื้องต้น:
-   - ตรวจว่าไม่มีค่า lab, diagnosis หรือ medication หลัง reference date ใน EDA set
+   - visits per patient
+   - follow-up duration
+   - time gaps between visits
+3. Temporal coverage:
+   - patients with FIRST visit
+   - patients with MID visit
+   - patients with LAST visit
+   - patients complete in all windows
+4. Missingness:
+   - by variable
+   - by stroke label
+   - by window
+5. Clinical descriptive statistics:
+   - all patients
+   - stroke vs non-stroke
+6. Leakage audit:
+   - confirm `visit_date <= reference_date`
+7. Attrition interpretation:
+   - compare raw cohort vs temporal-complete cohort
 
 ## Output
 
-- EDA summary report
-- Class imbalance table
-- Missingness tables
-- Visit coverage summary
-- Temporal coverage summary
-- Stroke vs non-stroke descriptive statistics
-- Leakage audit summary
+- `class_imbalance.csv`
+- `visit_frequency_by_patient.csv`
+- `visit_frequency_distribution.csv`
+- `window_visit_counts.csv`
+- `time_gap_summary.csv`
+- `missingness_by_variable.csv`
+- `missingness_by_stroke.csv`
+- `missingness_by_window.csv`
+- `temporal_coverage_summary.csv`
+- `clinical_descriptive_stats.csv`
+- `high_missing_variables.csv`
+- `leakage_audit_summary.csv`
+- `eda_summary_report.json`
+- `eda_summary_report.md`
 
 ## Checks / Acceptance Criteria
 
-- มีรายงาน stroke/non-stroke count ระดับ patient
-- มีรายงาน visit coverage แยก FIRST, MID, LAST
-- ระบุ variables ที่ missing สูงหรือไม่พร้อมใช้ temporal features
-- ระบุว่า completeness criteria ทำให้ sample ลดลงมากแค่ไหน
-- ไม่ใช้ข้อมูลหลัง reference date ใน plot หรือ summary ใด ๆ
+- Must report class imbalance
+- Must report temporal-complete patient count
+- Must show missingness by FIRST/MID/LAST
+- Must confirm no post-reference records
+- Must identify whether strict paper completeness leaves enough stroke cases
+- Must recommend sensitivity analysis if temporal-complete cohort is too small
 
 ## Relation to Paper
 
-Paper ใช้ strict temporal alignment และ completeness criteria ซึ่งอาจลด sample จำนวนมาก Stage นี้จึงต้องตรวจให้เห็นก่อนว่า dataset ของเรารองรับ multi-window temporal modeling ได้ดีแค่ไหน
-
+Paper emphasizes that real-world EHR are irregular, incomplete and heterogeneous. Stage นี้ตรวจว่าข้อมูลของเรามีปัญหานี้มากแค่ไหน และความเข้มของ completeness criteria แบบ paper ทำให้ sample size ลดลงเท่าไร

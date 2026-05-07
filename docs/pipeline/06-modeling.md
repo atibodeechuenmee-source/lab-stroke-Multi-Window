@@ -2,53 +2,57 @@
 
 ## Purpose
 
-ฝึกและเปรียบเทียบ model สำหรับ stroke-risk prediction โดยต้องมี single-shot baseline เป็น comparator เสมอ เพื่อวัดประโยชน์ของ temporal features
+Train และ evaluate stroke-risk prediction models ให้ใกล้ paper มากที่สุด โดยใช้ Logistic Regression เป็น interpretable baseline และใช้ `class_weight="balanced"` เพื่อรับมือ class imbalance
 
 ## Input
 
-- Single-shot baseline feature table จาก Stage 05
-- Extract Set 1/2/3 feature tables จาก Stage 05
-- Patient-level stroke labels จาก Stage 02
+- `single_shot_features.csv`
+- `extract_set_1_features.csv`
+- `extract_set_2_features.csv`
+- `extract_set_3_features.csv`
+- Target column `stroke`
 
 ## Process
 
-1. Baseline model:
-   - ใช้ single-shot features จาก latest pre-reference record
-   - train Logistic Regression with balanced class weight
-2. Temporal models:
-   - train Logistic Regression บน Extract Set 1/2/3
-   - ใช้ `class_weight="balanced"` เป็น default
-3. Optional comparator models:
-   - Random Forest
-   - XGBoost
-   - ใช้เพื่อดู nonlinear patterns แต่ไม่แทน Logistic Regression baseline
-4. Cross-validation:
-   - default ตาม paper คือ LOOCV
-   - ถ้า computational cost สูง ให้ใช้ patient-level stratified CV และระบุว่าเป็น deviation จาก paper
-5. Threshold handling:
-   - เก็บ predicted probability
-   - รายงาน metrics ที่ threshold default 0.5
-   - ทำ threshold analysis ใน validation stage ถ้าจำเป็น
+1. Load feature tables
+2. Prepare numeric feature matrix
+3. Keep patient-level independence
+4. Select CV strategy:
+   - Paper default: LOOCV
+   - Project fallback: patient-level StratifiedKFold เมื่อข้อมูลใหญ่หรือเพื่อให้รันได้จริง
+   - Skip เมื่อ class distribution ไม่พอ
+5. Train Logistic Regression:
+
+```text
+LogisticRegression(class_weight="balanced")
+```
+
+6. Evaluate each model:
+   - single-shot baseline
+   - Extract Set 1
+   - Extract Set 2
+   - Extract Set 3
+7. Save out-of-fold predictions
+8. Rank models by G-Mean
 
 ## Output
 
-- Model predictions ต่อ patient
-- Predicted probability
-- Predicted class
-- Model configuration log
-- CV fold assignment หรือ LOOCV prediction table
-- Baseline vs temporal model comparison inputs สำหรับ Stage 08
+- `model_cv_metrics.csv`
+- `model_config_log.csv`
+- `all_model_predictions.csv`
+- `<model_name>_predictions.csv`
+- `modeling_report.json`
+- `modeling_report.md`
 
 ## Checks / Acceptance Criteria
 
-- Train/test split หรือ CV ต้อง split ระดับ patient ไม่ใช่ record
-- ไม่มี patient เดียวกันอยู่ทั้ง train และ test ใน fold เดียวกัน
-- Baseline model ใช้ single-shot features เท่านั้น
-- Temporal model ใช้ Extract Set 1/2/3 ตามนิยาม
-- Logistic Regression ใช้ `class_weight="balanced"`
-- Predictions ทุก model ต้อง map กลับไปที่ patient id ได้
+- Single-shot baseline must always be attempted
+- Must report skipped temporal models with reason
+- Must prevent train/test patient overlap
+- Must report sensitivity, specificity, G-Mean, ROC-AUC when possible
+- Best model must be selected by G-Mean, not accuracy
+- Must keep prediction files for Stage 08 McNemar testing
 
 ## Relation to Paper
 
-Paper ใช้ Logistic Regression with `class_weight="balanced"` และ LOOCV เพราะข้อมูล imbalance สูงและต้องการ patient-level independence Stage นี้จึงใช้แนวทางเดียวกันเป็น default
-
+Paper ใช้ Logistic Regression with `class_weight="balanced"` และ LOOCV เพราะข้อมูล imbalance และต้องการ patient-level independence Stage นี้จึงต้องรักษาแนวคิดเดียวกัน แม้โปรเจกต์จะมี fallback เพื่อให้รันได้จริงบนข้อมูลที่มีข้อจำกัด

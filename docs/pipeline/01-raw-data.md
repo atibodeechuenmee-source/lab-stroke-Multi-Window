@@ -1,59 +1,69 @@
-# Stage 01: Raw Data
+# Stage 01: Raw Data Audit
 
 ## Purpose
 
-ตรวจสอบ raw EHR data ก่อนเริ่ม cleaning หรือ cohort construction เพื่อให้รู้ว่า dataset มี column ใดบ้าง, data type เป็นอย่างไร, stroke ICD code อยู่ใน field ไหน, และมีข้อมูลเพียงพอสำหรับ temporal feature engineering หรือไม่
+ตรวจ raw EHR data ก่อนทำ cohort/feature engineering ให้ตรงกับข้อมูลที่ paper ใช้ โดยไม่แก้ไขไฟล์ raw ต้นทาง
+
+Paper ใช้ EHR จาก Chokchai Hospital จำนวน 245,978 records จากผู้ป่วย 19,473 คน และเลือก clinical variables ที่เกี่ยวข้องกับ stroke risk จาก attributes เดิม 45 ตัว โปรเจกต์ของเราต้อง audit raw data ให้รู้ว่ามีคอลัมน์สำคัญครบหรือไม่ก่อนทำ stage ถัดไป
 
 ## Input
 
-- Raw data file ใน `data/raw`
-- Expected source: EHR records ระดับ visit/record
-- Paper reference: `paper/multi-window-temporal-features-stroke-risk-2026.md`
-
-Expected raw fields ควรครอบคลุม:
-
-- Patient identifier เช่น `HN` หรือ anonymized patient id
-- Visit date หรือ service date
-- Diagnosis fields เช่น principal diagnosis และ comorbidity diagnosis
-- ICD-10 codes
-- Blood pressure: BPS, BPD
-- Lipid labs: HDL, LDL, total cholesterol, triglycerides
-- FBS
-- BMI, height, weight ถ้ามี
-- eGFR, creatinine
-- Age, sex
-- Smoking, drinking
-- Atrial fibrillation
-- Medication fields เช่น statin และ antihypertensive drugs
+- Raw EHR file เช่น `data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx`
+- Expected columns:
+  - patient id / HN
+  - visit date
+  - principal diagnosis
+  - comorbidity diagnosis
+  - age, sex
+  - BPS, BPD
+  - HDL, LDL, total cholesterol, triglycerides
+  - FBS, BMI, eGFR, creatinine
+  - AF, smoking, alcohol
+  - medication / dispensed drugs
+  - diabetes, hypertension, heart disease
+  - statin, antihypertensive
+  - TC:HDL ratio ถ้ามี
 
 ## Process
 
-1. โหลด raw file แบบ read-only
-2. สร้าง raw schema summary ได้แก่ column name, inferred type, missing count, missing percent, example values
-3. ตรวจว่ามี patient id และ visit date ที่ใช้สร้าง longitudinal sequence ได้
-4. ตรวจ diagnosis fields ว่าสามารถ map ICD-10 `I60-I68` ได้หรือไม่
-5. ตรวจ unit และ value range เบื้องต้นของ labs และ vital signs
-6. ตรวจจำนวน records ต่อ patient และช่วงเวลาครอบคลุมของข้อมูล
-7. สร้าง data dictionary ฉบับแรกสำหรับส่งต่อ stage cleaning
+1. Read raw Excel/CSV แบบ read-only
+2. สร้าง schema summary:
+   - column name
+   - dtype
+   - missing count / missing percent
+   - unique count
+   - example values
+3. ตรวจ availability ของ columns ที่ paper ใช้
+4. ตรวจ diagnosis columns ว่ามี ICD-10 `I60-I68` หรือไม่
+5. ตรวจ visit coverage ต่อ patient:
+   - จำนวน visits
+   - first visit
+   - last visit
+   - follow-up duration
+6. ตรวจ plausible ranges เบื้องต้นโดยไม่แก้ข้อมูล
+7. เขียน raw audit report
 
 ## Output
 
-- Raw column list
-- Raw schema summary
-- Missingness summary
-- Visit coverage summary ต่อ patient
-- ICD-10 availability report
-- รายการ columns ที่ต้อง rename หรือ standardize
+- `raw_column_list.csv`
+- `raw_schema_summary.csv`
+- `raw_missing_summary.csv`
+- `raw_range_summary.csv`
+- `visit_coverage_summary.csv`
+- `icd10_availability_report.csv`
+- `column_availability_checklist.csv`
+- `raw_data_report.json`
+- `raw_data_report.md`
 
 ## Checks / Acceptance Criteria
 
-- พบ patient identifier ที่ใช้ group records เป็น patient-level ได้
-- พบ date column ที่ใช้ sort visits และสร้าง temporal windows ได้
-- พบ diagnosis/ICD fields ที่ใช้สร้าง stroke target ได้
-- พบ core clinical variables เพียงพอสำหรับสร้าง Extract Set 1/2/3 หรือระบุ missing columns ไว้ชัดเจน
-- ยังไม่มีการลบหรือแก้ raw data ใน stage นี้
+- ไฟล์ raw ต้องไม่ถูกแก้ไข
+- ต้องพบ patient id และ visit date
+- ต้องพบ diagnosis column อย่างน้อยหนึ่งคอลัมน์
+- ต้องตรวจ ICD-10 `I60-I68`
+- ต้องรายงาน missingness ของตัวแปรหลักที่ paper ใช้
+- ต้องรายงาน visit coverage เพราะ temporal windows ต้องพึ่ง longitudinal records
 
 ## Relation to Paper
 
-Paper ใช้ real-world EHR จำนวนมากและเลือก clinical variables จาก raw attributes ก่อนสร้าง temporal windows ดังนั้น stage นี้ทำหน้าที่เทียบ raw data ของเรากับ variable requirements ของ paper ก่อนเริ่ม cohort construction
-
+Stage นี้สอดคล้องกับส่วน Data Collection ของ paper โดยตรวจว่าข้อมูลของเรามีโครงใกล้กับ EHR ที่ paper ใช้หรือไม่ และพร้อมสำหรับการคัด cohort ตาม ICD-10, reference date และ temporal completeness หรือไม่

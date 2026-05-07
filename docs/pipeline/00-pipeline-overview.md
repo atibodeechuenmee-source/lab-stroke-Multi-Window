@@ -1,94 +1,76 @@
-# Pipeline Overview: Multi-Window Temporal Stroke-Risk Prediction
+# Stage 00: Pipeline Overview
 
 ## Purpose
 
-เอกสารนี้เป็นภาพรวม pipeline สำหรับสร้าง patient-level stroke-risk prediction ตามแนวทางงานวิจัย `Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction`
+กำหนดภาพรวม pipeline ของโปรเจกต์ให้ทำตามงานวิจัย `Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction` ให้มากที่สุด โดยใช้ real-world EHR เพื่อสร้าง patient-level stroke-risk prediction และเปรียบเทียบ `single-shot baseline` กับ temporal feature models
 
-เป้าหมายหลักคือเปลี่ยน raw EHR records ให้เป็นข้อมูลระดับผู้ป่วยที่ใช้เปรียบเทียบ `single-shot baseline` กับ temporal feature models ได้อย่างชัดเจน โดยต้องป้องกัน data leakage จากข้อมูลหลัง stroke event หรือหลัง `reference date`
+เป้าหมายสำคัญคือทำให้ทุก stage ในโปรเจกต์รักษาหลักเดียวกับ paper:
+
+- patient-level cohort
+- ICD-10 stroke definition `I60-I68`
+- reference date ที่ชัดเจน
+- ไม่ใช้ post-reference records
+- FIRST/MID/LAST retrospective windows
+- Extract Set 1/2/3
+- Logistic Regression with `class_weight="balanced"`
+- LOOCV หรือ patient-level CV
+- sensitivity, specificity, G-Mean
+- McNemar's test เมื่อมี paired predictions
 
 ## Input
 
-- Raw EHR data จาก `data/raw`
-- Paper note หลัก: `paper/multi-window-temporal-features-stroke-risk-2026.md`
-- ICD-10 stroke definition: `I60-I68`
-- Core clinical variables เช่น blood pressure, lipid labs, glucose, renal markers, diagnosis, medication และ demographic fields
+- Raw EHR data ใน `data/raw`
+- Paper PDF: `paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.pdf`
+- Paper note: `paper/multi-window-temporal-features-stroke-risk-2026.md`
+- Full Thai translation: `paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.th.md`
 
 ## Process
 
-Pipeline แบ่งเป็น 10 stages:
+Pipeline แบ่งเป็น stage ตาม paper:
 
-1. Raw data audit และ data dictionary
+1. Raw data audit
 2. Target and cohort construction
-3. Data cleaning
+3. Data cleaning and preprocessing
 4. Exploratory data analysis
-5. Feature engineering
+5. Temporal feature engineering
 6. Modeling
 7. Feature importance and dimensionality reduction
 8. Validation
 9. Optional deployment planning
 
-หลักการสำคัญ:
+Paper-default temporal windows:
 
-- สร้างหนึ่งแถวต่อหนึ่ง patient ใน final modeling table
-- กำหนด `reference date` ให้ชัดเจนก่อนสร้าง feature
-- Stroke patient ใช้ first stroke event เป็น `reference date`
-- Non-stroke patient ใช้ last clinical visit เป็น `reference date`
-- ลบ records หลัง `reference date` ออกทั้งหมด
-- ใช้ temporal windows ตาม paper เป็นค่า default:
-  - FIRST: 21-9 เดือนก่อน reference date
-  - MID: 18-6 เดือนก่อน reference date
-  - LAST: 15-3 เดือนก่อน reference date
-- สร้าง single-shot baseline จาก latest pre-reference record เพื่อเปรียบเทียบกับ temporal features
+```text
+FIRST = 21-9 เดือนก่อน reference date
+MID   = 18-6 เดือนก่อน reference date
+LAST  = 15-3 เดือนก่อน reference date
+```
+
+Paper-default cohort rules:
+
+- Stroke patient: `reference date` = first stroke event
+- Non-stroke patient: `reference date` = last clinical visit
+- Remove all records after `reference date`
+- Require at least one visit in FIRST/MID/LAST
+- Require core clinical variables available in every window
 
 ## Output
 
-- Stage-level markdown documents ใน `docs/pipeline`
-- นิยาม input/output ของแต่ละ stage
-- Acceptance criteria สำหรับตรวจคุณภาพก่อนส่งต่อ stage ถัดไป
-- Code modules ใน `src`
-- Job notes ใน `job`
+- Stage documents ใน `docs/pipeline`
+- Stage implementations ใน `src`
+- Stage job notes ใน `job`
 - Generated artifacts ใน `output`
+- End-to-end manifest จาก `src.temporal_pipeline`
 
 ## Checks / Acceptance Criteria
 
-- มีเอกสารครบ `00` ถึง `09`
-- ทุก stage ระบุ `Purpose`, `Input`, `Process`, `Output`, `Checks / Acceptance Criteria`, `Relation to Paper`
-- ทุก stage ที่เกี่ยวกับ feature หรือ target ต้องระบุชัดว่าไม่ใช้ post-reference records
-- Modeling และ validation ต้องมี single-shot baseline เป็น comparator
-- Validation ต้องมี sensitivity, specificity, G-Mean และ McNemar's test เมื่อ paired predictions พร้อม
-
-## Implementation Status
-
-โค้ดปัจจุบันแยก implementation ตาม stage ใน `src/` และมี `src/temporal_pipeline.py` เป็น orchestrator สำหรับเรียกใช้ stage เหล่านั้นแบบ end-to-end
-
-Stage modules:
-
-- Stage 01: `src/raw_data.py`
-- Stage 02: `src/target_cohort.py`
-- Stage 03: `src/data_cleaning.py`
-- Stage 04: `src/eda.py`
-- Stage 05: `src/feature_engineering.py`
-- Stage 06: `src/modeling.py`
-- Stage 07: `src/feature_importance.py`
-- Stage 08: `src/validation.py`
-
-Orchestrator:
-
-```powershell
-.\.venv\Scripts\python.exe -m src.temporal_pipeline --skip-modeling
-```
-
-ผลทดสอบล่าสุดของ orchestrator แบบ `--skip-modeling` ผ่าน Stage 01-05 สำเร็จ:
-
-- raw rows: 218,772
-- patients: 13,635
-- stroke patients: 969
-- pre-reference records: 194,231
-- temporal-complete patients: 13
-- Extract Set 1/2/3 ถูกสร้างสำเร็จ
-
-ข้อจำกัดปัจจุบันคือ strict temporal completeness เหลือผู้ป่วยครบทุก window เพียง 13 ราย ทำให้ temporal models ใน Stage 06-08 ยังถูก skip เมื่อ class distribution ไม่พอ
+- ทุก stage ต้องระบุ input/output ชัดเจน
+- ไม่มี stage ใดใช้ post-reference data เพื่อสร้าง target, features, model หรือ validation
+- Single-shot baseline ต้องถูกเก็บเป็น comparator เสมอ
+- Temporal features ต้องอ้างอิง FIRST/MID/LAST ตาม paper เป็น default
+- Metrics หลักต้องมี sensitivity, specificity และ G-Mean
+- Validation ต้องรองรับ McNemar's test เมื่อมี paired predictions
 
 ## Relation to Paper
 
-Pipeline นี้ยึด paper เป็น blueprint โดยเฉพาะส่วน patient-level cohort, temporal windows, completeness criteria, Extract Set 1/2/3, Logistic Regression with balanced class weight, G-Mean และ McNemar's test
+ไฟล์นี้กำหนดให้ทั้งโปรเจกต์ใช้ paper เป็น blueprint หลัก ไม่ใช่แค่ related work โดย stage 01-08 ต้องออกแบบให้สอดคล้องกับ Data Collection, Data Selection, Preprocessing, Feature Extraction, Feature Selection, PCA, Logistic Regression, LOOCV และ Validation ของ paper

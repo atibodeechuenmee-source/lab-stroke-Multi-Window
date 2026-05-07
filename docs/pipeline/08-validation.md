@@ -2,62 +2,77 @@
 
 ## Purpose
 
-ประเมิน model performance อย่างเหมาะสมกับ imbalanced stroke prediction และตรวจว่าการใช้ temporal features ดีกว่า single-shot baseline อย่างมีนัยสำคัญหรือไม่
+ทำ validation ตาม paper เพื่อพิสูจน์ว่า temporal representations ให้ผลดีกว่า single-shot baseline อย่างมีความหมาย โดยเน้น metrics สำหรับ imbalanced clinical data
 
 ## Input
 
-- Patient-level labels จาก Stage 02
-- Predictions จาก baseline และ temporal models จาก Stage 06
+- Prediction files จาก Stage 06
 - Feature selection/PCA results จาก Stage 07
-- Cohort attrition และ EDA summaries จาก Stage 02/04
+- Cohort attrition จาก Stage 02
+- Leakage audit จาก Stage 04
 
 ## Process
 
-1. Performance metrics:
+1. Build metrics table:
    - sensitivity
    - specificity
    - G-Mean
-   - ROC-AUC optional
-   - PR-AUC optional
-2. G-Mean เป็น metric หลัก:
+   - ROC-AUC when available
+   - PR-AUC when available
+
+2. Use G-Mean as primary metric:
 
 ```text
 G-Mean = sqrt(Sensitivity * Specificity)
 ```
 
-3. Baseline comparison:
-   - เปรียบเทียบ single-shot baseline กับ Extract Set 1/2/3
-   - เปรียบเทียบ no reduction, ANOVA, PCA, ANOVA+PCA
+3. Compare model groups:
+   - single-shot baseline
+   - Extract Set 1
+   - Extract Set 2
+   - Extract Set 3
+   - no reduction
+   - ANOVA
+   - PCA
+   - ANOVA+PCA
+
 4. McNemar's test:
-   - ใช้ paired predictions ของ baseline และ temporal model
-   - รายงาน disagreement counts, chi-square และ p-value
+   - compare paired predictions
+   - baseline vs best temporal model
+   - report disagreement counts
+   - report chi-square and p-value
+
 5. Leakage audit:
-   - ตรวจว่า validation predictions มาจาก features ก่อน reference date เท่านั้น
-   - ตรวจว่า feature selection/PCA fit เฉพาะ training folds
+   - confirm no post-reference features
+   - confirm fold-local feature selection/PCA
+
 6. Cohort attrition review:
-   - รายงานจำนวน patients ก่อน/หลัง completeness criteria
-   - ระบุผลกระทบของ strict temporal windows ต่อ sample size
+   - report raw cohort
+   - report post-reference cohort
+   - report temporal-complete cohort
+   - explain effect of strict completeness
 
 ## Output
 
-- Validation report
-- Confusion matrix ต่อ model
-- Sensitivity/specificity/G-Mean table
-- ROC-AUC/PR-AUC table ถ้ามี
-- McNemar's test report
-- Leakage audit report
-- Cohort attrition report
+- `validation_metrics.csv`
+- `validation_confusion_matrices.csv`
+- `roc_pr_auc_table.csv`
+- `baseline_vs_temporal_comparison.csv`
+- `mcnemar_test_report.csv`
+- `leakage_audit_report.csv`
+- `cohort_attrition_validation_view.csv`
+- `validation_summary.json`
+- `validation_report.md`
 
 ## Checks / Acceptance Criteria
 
-- ทุก model มี sensitivity, specificity และ G-Mean
-- รายงาน single-shot baseline แยกจาก temporal models
-- มี McNemar's test อย่างน้อยหนึ่งคู่: best temporal model vs single-shot baseline
-- ไม่มี metric ที่คำนวณจาก post-reference features
-- ระบุ model ที่ดีที่สุดด้วย G-Mean ไม่ใช่ accuracy อย่างเดียว
-- รายงานข้อจำกัดจาก class imbalance และ sample size
+- Every completed model must have sensitivity, specificity, G-Mean
+- Baseline must be separated from temporal models
+- McNemar report must exist even if skipped with reason
+- Best model must be selected by G-Mean
+- Validation must not compute metrics from post-reference features
+- Must explicitly report sample-size/class-imbalance limitations
 
 ## Relation to Paper
 
-Paper ใช้ G-Mean เพราะข้อมูล imbalance สูง และใช้ McNemar's test เพื่อพิสูจน์ว่า temporal model ดีกว่า baseline อย่างมีนัยสำคัญ Stage นี้จึงทำหน้าที่เป็น evidence layer ของ pipeline
-
+Paper ใช้ G-Mean เพราะข้อมูล imbalance สูง และใช้ McNemar's test เพื่อยืนยันว่า temporal model เหนือกว่า baseline อย่างมีนัยสำคัญ Stage นี้จึงเป็น evidence layer สำคัญที่สุดของ pipeline

@@ -1,54 +1,68 @@
-# Stage 02: Target and Cohort
+# Stage 02: Target and Cohort Construction
 
 ## Purpose
 
-สร้าง patient-level cohort และ target variable สำหรับ stroke-risk prediction โดยกำหนด `reference date` อย่างชัดเจน และตัด records หลัง reference date เพื่อป้องกัน data leakage
+สร้าง patient-level cohort และ target label ตาม paper โดยใช้ ICD-10 `I60-I68` เพื่อระบุ stroke และกำหนด `reference date` ให้ถูกต้องก่อนสร้าง features
+
+Stage นี้เป็นจุดกัน data leakage ที่สำคัญที่สุด เพราะทุก stage หลังจากนี้ต้องใช้เฉพาะ records ก่อนหรือเท่ากับ `reference date`
 
 ## Input
 
-- Raw หรือ lightly standardized EHR records จาก Stage 01
-- Patient id
-- Visit date
-- ICD-10 diagnosis fields
-- Core clinical variables สำหรับ temporal feature extraction
+- Raw EHR data จาก Stage 01
+- Required columns:
+  - patient id
+  - visit date
+  - principal diagnosis
+  - comorbidity diagnosis
+  - core clinical variables
 
 ## Process
 
-1. ระบุ stroke event จาก ICD-10 codes `I60-I68`
-2. สร้าง patient-level stroke label:
-   - `stroke = 1` ถ้าผู้ป่วยมี ICD-10 `I60-I68` อย่างน้อยหนึ่งครั้ง
-   - `stroke = 0` ถ้าไม่พบ stroke event ใน records
-3. กำหนด `reference date`:
-   - stroke patient: วันที่เกิด stroke ครั้งแรก
-   - non-stroke patient: วันที่ visit ล่าสุด
-4. ลบ records ที่เกิดหลัง `reference date`
-5. สร้าง temporal windows:
-   - FIRST: 21-9 เดือนก่อน reference date
-   - MID: 18-6 เดือนก่อน reference date
-   - LAST: 15-3 เดือนก่อน reference date
-6. ตรวจ temporal completeness:
-   - ต้องมีอย่างน้อย 1 visit ในทุก window
-   - core clinical variables ต้องมีครบในทุก window สำหรับ temporal feature extraction
-7. สร้าง cohort attrition table เพื่อแสดงจำนวน patient ที่ถูกคัดออกในแต่ละเงื่อนไข
+1. Normalize visit date เป็น datetime
+2. Identify stroke events ด้วย ICD-10 `I60-I68`
+3. Build patient-level cohort:
+   - first visit date
+   - last visit date
+   - first stroke date
+   - record count
+   - stroke label
+4. Define `reference date`:
+   - stroke patient = first stroke event date
+   - non-stroke patient = last clinical visit date
+5. Remove all records after `reference date`
+6. Calculate months before reference:
+
+```text
+months_before_reference = (reference_date - visit_date) / 30.4375
+```
+
+7. Assign temporal windows:
+   - FIRST: 21-9 months
+   - MID: 18-6 months
+   - LAST: 15-3 months
+8. Build temporal completeness flags:
+   - has visit in every window
+   - has core clinical variables in every window
+9. Build cohort attrition report
 
 ## Output
 
-- Patient-level cohort table
-- Patient id, stroke label, reference date
-- Pre-reference records เท่านั้น
-- Window assignment สำหรับแต่ละ record
-- Cohort attrition report
-- Temporal completeness flags
+- `patient_level_cohort.csv`
+- `pre_reference_records_with_windows.csv`
+- `temporal_completeness_flags.csv`
+- `cohort_attrition_report.csv`
+- `target_cohort_summary.json`
+- `target_cohort_report.md`
 
 ## Checks / Acceptance Criteria
 
-- ไม่มี record ที่ visit date มากกว่า reference date ใน output
-- Stroke patient ทุกคนมี reference date เป็น first stroke date เท่านั้น
-- Non-stroke patient ทุกคนมี reference date เป็น last visit date
-- ทุก patient ที่ผ่าน final cohort มี FIRST, MID, LAST ครบ
-- รายงานจำนวน excluded patients แยกตามเหตุผลได้
+- Stroke patients must use first stroke event as `reference date`
+- Non-stroke patients must use last clinical visit as `reference date`
+- No record after `reference date`
+- Window assignment must use paper-default FIRST/MID/LAST
+- Attrition report must show how many patients remain after temporal completeness
+- Temporal-complete cohort must be reported separately from all pre-reference patients
 
 ## Relation to Paper
 
-Stage นี้เป็นแกนหลักของ paper เพราะ paper สร้าง temporal representation จาก three retrospective windows และใช้ strict completeness criteria ก่อน model training
-
+Stage นี้ตรงกับ Data Selection ของ paper ซึ่งกำหนด ICD-10 `I60-I68`, reference date, post-event leakage removal, temporal windows และ completeness criteria ก่อนสร้าง temporal representations

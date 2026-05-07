@@ -1,57 +1,63 @@
-# Stage 09: Deployment Optional
+# Stage 09: Deployment Notes (Optional)
 
 ## Purpose
 
-บันทึกข้อพิจารณาหากต้องนำ temporal stroke-risk model ไปใช้เป็น clinical decision-support system ในอนาคต โดย stage นี้ยังเป็น optional และไม่ใช่การ deploy จริง
+บันทึกข้อควรพิจารณาหากนำ pipeline ไปต่อยอดเป็น clinical decision-support system โดยยังยึดข้อจำกัดและแนวคิดจาก paper
+
+Stage นี้ optional เพราะ paper ยังเป็นงานวิจัยเชิง framework ไม่ใช่ระบบ deploy จริง
 
 ## Input
 
-- Best validated model จาก Stage 08
+- Best model and validation report จาก Stage 08
 - Feature dictionary จาก Stage 05
-- Validation report จาก Stage 08
-- Known limitations จาก paper และจากข้อมูลของเรา
+- Cohort/attrition report จาก Stage 02
+- Leakage audit จาก Stage 04/08
+- Paper limitations
 
 ## Process
 
-1. Inference-time requirements:
-   - ต้องมี patient id
-   - ต้องมี visit history ก่อน prediction date
-   - ต้องสร้าง FIRST/MID/LAST windows ได้
-   - ต้องมี core clinical variables ครบตาม feature set ที่เลือก
-2. Prediction date:
-   - production setting ต้องกำหนด prediction date แทน reference date
-   - ห้ามใช้ future records หลัง prediction date
-3. Model output:
-   - predicted probability
-   - risk group ถ้ามี threshold ที่ validate แล้ว
-   - explanation หรือ feature contribution สำหรับ clinical review
-4. Monitoring:
-   - class distribution drift
+1. Define inference-time requirements:
+   - patient id
+   - visit date
+   - clinical labs
+   - diagnosis
+   - medication/risk factors
+   - enough visits in required windows
+2. Check whether a patient has enough temporal coverage
+3. Fall back rules:
+   - if temporal completeness fails, use single-shot baseline
+   - report uncertainty / insufficient longitudinal history
+4. Interpretability:
+   - Logistic Regression coefficients for non-PCA models
+   - ANOVA-selected features for explanation
+   - PCA models need component-level caution
+5. Monitoring:
    - missingness drift
-   - lab/unit drift
-   - model calibration drift
-   - sensitivity/specificity drift เมื่อมี outcome ย้อนหลัง
-5. External validation:
-   - ต้องทดสอบกับโรงพยาบาลหรือช่วงเวลาที่ไม่อยู่ใน training data
-   - ต้องตรวจว่า temporal window coverage ยังใช้ได้กับ workflow จริง
+   - visit frequency drift
+   - lab availability drift
+   - stroke prevalence drift
+   - performance drift
+6. External validation:
+   - validate on another hospital/site
+   - validate on later time period
+   - compare with paper cohort and local cohort
 
 ## Output
 
-- Deployment readiness checklist
-- Inference data requirements
-- Monitoring plan
+- Deployment readiness notes
+- Inference input requirements
+- Monitoring checklist
 - External validation plan
-- Clinical safety notes
+- Clinical risk and limitation notes
 
 ## Checks / Acceptance Criteria
 
-- ระบุชัดว่า stage นี้ optional และยังไม่ใช่ production deployment
-- inference logic ไม่ใช้ข้อมูลหลัง prediction date
-- ระบุ required features และ required temporal history
-- ระบุ limitation ของ model ก่อนใช้งานจริง
-- ต้องมี external validation ก่อน clinical use
+- Must state that current model is research-stage unless externally validated
+- Must not hide temporal-completeness limitations
+- Must include fallback for insufficient window coverage
+- Must include monitoring plan
+- Must include clinician-review requirement before real use
 
 ## Relation to Paper
 
-Paper สรุปว่า temporal features เพิ่มความน่าเชื่อถือของ decision support เมื่อเทียบกับ single-time-point approaches แต่ยังมีข้อจำกัดด้าน sample size, real-world missingness และ external validation Stage นี้จึงบันทึกเงื่อนไขก่อนต่อยอดสู่การใช้งานจริง
-
+Paper proposes a framework for more robust stroke-risk stratification using routine hospital EHR, but does not provide production deployment evidence. Stage นี้จึงแปลข้อค้นพบของ paper เป็น deployment cautions และ next steps โดยไม่กล่าวเกินหลักฐาน

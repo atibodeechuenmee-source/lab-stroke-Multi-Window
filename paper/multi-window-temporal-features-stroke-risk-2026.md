@@ -6,55 +6,68 @@
 - ผู้แต่ง: Chanon Thansawd, Eri Sato-Shimokawara, Suwanna Rasmequan, Sittisak Saechueng, Yosuke Fukuchi, Waranrach Viriyavit, Peerasak Painprasit, Nobuyuki Nishiuchi
 - ปีที่เผยแพร่: 2026
 - งานประชุม: 2026 18th International Conference on Knowledge and Smart Technology (KST)
-- DOI: 10.1109/KST67832.2026.11431866
-- URL: https://ieeexplore.ieee.org/abstract/document/11431866
-- ไฟล์ PDF ในโปรเจกต์: `paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.pdf`
+- DOI: `10.1109/KST67832.2026.11431866`
+- IEEE: https://ieeexplore.ieee.org/abstract/document/11431866
+- PDF ในโปรเจกต์: `paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.pdf`
+- ไฟล์แปลไทยแบบเต็ม: `paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.th.md`
 
-## ลิงก์อ้างอิง
+## สถานะการอ่านล่าสุด
 
-- Paper: https://ieeexplore.ieee.org/abstract/document/11431866
-- DOI: https://doi.org/10.1109/KST67832.2026.11431866
-- Dataset/Code ถ้ามี: ไม่พบการเผยแพร่ dataset หรือ source code ใน paper
+อ่าน PDF รอบล่าสุดครบ 6 หน้าแล้ว และสร้างไฟล์แปลภาษาไทยแบบไม่ย่อไว้ใน `paper/source`
+
+ไฟล์นี้เป็น research note สำหรับใช้เป็น blueprint ของโปรเจกต์ ไม่ใช่คำแปลเต็ม หากต้องการอ่านเนื้อหา paper ตามลำดับหัวข้อเดิมให้ใช้ไฟล์ `.th.md` ใน `paper/source`
 
 ## เหตุผลที่เลือก paper นี้
 
-Paper นี้ตรงกับโปรเจกต์ของเราอย่างมาก เพราะเป็นงานทำนายความเสี่ยง stroke จากข้อมูล EHR จริงของโรงพยาบาลในประเทศไทย และไม่ได้ใช้ข้อมูลแบบ single-shot เพียง record ล่าสุดเท่านั้น แต่สร้าง temporal features จากประวัติย้อนหลังหลายช่วงเวลาเพื่อจับแนวโน้มสุขภาพก่อนเกิด stroke
+Paper นี้ตรงกับโปรเจกต์ของเราโดยตรง เพราะศึกษาการทำนายความเสี่ยง stroke จาก real-world EHR ในโรงพยาบาลไทย และเน้นปัญหาที่โมเดลแบบ single-shot มองไม่เห็นการเปลี่ยนแปลงสุขภาพตามเวลา เช่น ความดันที่ค่อย ๆ สูงขึ้น ไตเสื่อมลง หรือ lipid profile ผันผวนก่อนเกิด stroke
 
-จุดที่มีประโยชน์มากคือ paper เสนอวิธีจัดข้อมูลผู้ป่วยให้เป็น patient-level cohort, กำหนด reference date, ตัดข้อมูลหลัง event เพื่อกัน data leakage, สร้าง retrospective windows และเปรียบเทียบ baseline แบบ single-shot กับ temporal model โดยใช้ metric ที่เหมาะกับ class imbalance เช่น G-Mean
+จุดสำคัญที่นำมาใช้กับโปรเจกต์:
+
+- สร้าง patient-level cohort แทน record-level dataset
+- กำหนด `reference date` ชัดเจน
+- ลบ post-reference records เพื่อป้องกัน leakage
+- สร้าง retrospective temporal windows
+- เปรียบเทียบ `single-shot baseline` กับ temporal feature models
+- ใช้ `G-Mean` เป็น metric หลักสำหรับข้อมูล class imbalance
+- ใช้ McNemar's test เพื่อเทียบ paired predictions
 
 ## วัตถุประสงค์ของงานวิจัย
 
-งานวิจัยนี้ต้องการทดสอบว่าการนำข้อมูล longitudinal EHR มาสร้าง temporal features หลายช่วงเวลาสามารถเพิ่มประสิทธิภาพการทำนายความเสี่ยง stroke ได้ดีกว่าการใช้ข้อมูล clinical record ล่าสุดเพียงครั้งเดียวหรือไม่
+งานวิจัยต้องการทดสอบว่าการใช้ longitudinal EHR เพื่อสร้าง temporal features จากหลายช่วงเวลาก่อน `reference date` ช่วยเพิ่มประสิทธิภาพการทำนายความเสี่ยง stroke ได้ดีกว่าการใช้ clinical record ล่าสุดเพียงครั้งเดียวหรือไม่
 
-ปัญหาหลักที่ paper พยายามแก้คือ model ทำนาย stroke จำนวนมากใช้ข้อมูลแบบ cross-sectional หรือ single-shot ทำให้มองไม่เห็นการเปลี่ยนแปลงทางสุขภาพที่ค่อย ๆ เกิดขึ้นก่อน stroke เช่น ความดันเพิ่มขึ้น ค่าไตลดลง หรือค่า lipid เปลี่ยนแปลงตามเวลา
+ปัญหาหลักที่ paper พยายามแก้คือโมเดล stroke prediction จำนวนมากใช้ข้อมูลแบบ cross-sectional หรือ single-shot ทำให้ไม่เห็น health trajectory ที่ค่อย ๆ เปลี่ยนก่อนเกิด stroke
 
-## Dataset ที่ใช้
+## Dataset ที่ใช้ใน Paper
 
-- แหล่งข้อมูล: Electronic Health Records จาก Chokchai Hospital, Thailand
+- แหล่งข้อมูล: EHR จาก Chokchai Hospital, Thailand
 - ช่วงเวลา: ตุลาคม 2014 ถึง มิถุนายน 2024
 - จำนวน records เดิม: 245,978 records
 - จำนวนผู้ป่วยเดิม: 19,473 คน
-- ผู้ป่วยไม่มีประวัติ stroke: 16,696 คน หรือ 85.7%
-- ผู้ป่วยมี stroke อย่างน้อย 1 ครั้ง: 2,777 คน หรือ 14.3%
+- ผู้ป่วยไม่มีประวัติ stroke: 16,696 คน (85.7%)
+- ผู้ป่วยมี stroke อย่างน้อย 1 ครั้ง: 2,777 คน (14.3%)
 - นิยาม stroke: ICD-10 codes `I60-I68`
 - จำนวน attributes เดิม: 45 attributes
-- จำนวนตัวแปร clinical ที่เลือกใช้: 16 ตัวแปร
+- ตัวแปร clinical ที่เลือกใช้: 16 ตัวแปร
 
-หลังจาก temporal alignment และ completeness filtering เหลือ cohort สุดท้าย:
+หลังใช้ temporal alignment และ completeness criteria เหลือ final dataset:
 
-- จำนวนผู้ป่วยทั้งหมด: 3,976 คน
+- ผู้ป่วยทั้งหมด: 3,976 คน
 - Stroke cases: 148 คน
 - Non-stroke cases: 3,828 คน
 
-ข้อมูลสุดท้ายมี class imbalance สูงมาก จึงต้องใช้วิธีประเมินผลที่ไม่พึ่ง accuracy เพียงอย่างเดียว
+ข้อมูลสุดท้ายยังมี class imbalance สูงมาก จึงไม่ควรใช้ accuracy เป็น metric หลักเพียงอย่างเดียว
 
 ## Target / Outcome
 
-Outcome คือ binary classification เพื่อทำนายว่าผู้ป่วยจะเป็น stroke หรือ non-stroke
+Outcome คือ binary classification เพื่อทำนายว่าผู้ป่วยเป็น stroke หรือ non-stroke
 
-สำหรับผู้ป่วย stroke ใช้ first stroke event เป็น reference date ส่วนผู้ป่วย non-stroke ใช้ last clinical visit เป็น reference date จากนั้นลบ records หลัง reference date ออกทั้งหมดเพื่อป้องกัน post-event leakage
+กติกา reference date:
 
-ในแง่โปรเจกต์ของเรา paper นี้ใช้ target ใกล้เคียงกับแนวคิด patient-level stroke occurrence โดยอ้างอิง ICD-10 `I60-I68` ซึ่งเป็นกลุ่ม cerebrovascular diseases ที่เกี่ยวข้องกับ stroke
+- Stroke patient: ใช้ first stroke event เป็น `reference date`
+- Non-stroke patient: ใช้ last clinical visit เป็น `reference date`
+- ลบ records หลัง `reference date` ทั้งหมดเพื่อกัน post-event leakage
+
+แนวคิดนี้ตรงกับ pipeline ของเรา และเป็นเหตุผลที่ Stage 02 ของโปรเจกต์ต้องทำ target/cohort construction ก่อน feature engineering
 
 ## Temporal Window Design
 
@@ -64,21 +77,21 @@ Paper สร้าง retrospective observation windows 3 ช่วง:
 - MID window: 18 ถึง 6 เดือนก่อน reference date
 - LAST window: 15 ถึง 3 เดือนก่อน reference date
 
-ทั้ง stroke และ non-stroke patients ใช้โครงสร้าง window เดียวกัน โดยเทียบกับ reference date ของแต่ละคน
+ทั้ง stroke และ non-stroke patients ใช้โครงสร้าง window เดียวกัน โดยเทียบกับ `reference date` ของแต่ละคน
 
-เกณฑ์ completeness ที่ใช้:
+Completeness criteria:
 
 - แต่ละ patient ต้องมีอย่างน้อย 1 visit ในทุก window
-- core clinical variables ต้องมีครบในทุก window
+- Core clinical variables ที่จำเป็นต้องมีครบในทุก window
 
-เกณฑ์นี้ช่วยให้ temporal features เปรียบเทียบกันได้ระหว่างผู้ป่วย แต่ทำให้จำนวน sample ลดลงมาก
+ข้อดีคือ temporal features เปรียบเทียบกันได้ระหว่างผู้ป่วย ข้อเสียคือ sample size ลดลงมาก โดยเฉพาะเมื่อ EHR จริง sparse หรือ visit ไม่สม่ำเสมอ
 
-## Features สำคัญ
+## ตัวแปรสำคัญ
 
-ตัวแปรสำคัญที่ใช้ประกอบด้วย:
+ตัวแปรที่ paper ใช้หรืออ้างถึงในการสร้าง features:
 
 - Age
-- Sex
+- Sex / gender
 - Systolic blood pressure (BPS)
 - Diastolic blood pressure (BPD)
 - HDL
@@ -89,7 +102,7 @@ Paper สร้าง retrospective observation windows 3 ช่วง:
 - Creatinine
 - Total cholesterol
 - Triglycerides
-- Atrial fibrillation
+- Atrial fibrillation (AF)
 - Smoking status
 - Alcohol drinking status
 - Diabetes
@@ -98,8 +111,11 @@ Paper สร้าง retrospective observation windows 3 ช่วง:
 - Statin use
 - Antihypertensive use
 - TC:HDL ratio
+- Principal diagnosis
+- Comorbidity diagnosis
+- Dispensed drugs
 
-TC:HDL ratio คำนวณจาก:
+Derived biomarker:
 
 ```text
 TC:HDL = Total Cholesterol / HDL
@@ -107,7 +123,7 @@ TC:HDL = Total Cholesterol / HDL
 
 ## Feature Extraction
 
-Paper แบ่ง feature sets เป็น 3 ระดับ:
+Paper แบ่ง feature sets เป็น 3 ระดับ
 
 ### Extract Set 1
 
@@ -119,8 +135,8 @@ Paper แบ่ง feature sets เป็น 3 ระดับ:
 ### Extract Set 2
 
 - จำนวน features: 115
-- เพิ่ม statistical และ temporal descriptors จาก numerical variables
-- descriptors สำคัญ เช่น mean, minimum, maximum, standard deviation, first value, last value, delta change, slope of change, cross-window differences และ measurement count differences
+- ขยายจาก Set 1 ด้วย statistical และ temporal descriptors
+- ใช้ descriptors เช่น mean, minimum, maximum, standard deviation, first value, last value, delta change, slope of change, cross-window differences และ measurement count differences
 
 สมการ temporal features หลัก:
 
@@ -132,103 +148,170 @@ Slope(X) = (X_LAST - X_FIRST) / (t_LAST - t_FIRST)
 ### Extract Set 3
 
 - จำนวน features: 121
-- เพิ่ม risk factors อีก 6 ตัวจาก Extract Set 2
-- risk factors คือ diabetes, hypertension, heart disease, statin use, antihypertensive use และ TC:HDL ratio
+- ขยายจาก Set 2 โดยเพิ่ม risk factors อีก 6 ตัว
+- Risk factors คือ diabetes, hypertension, heart disease, statin use, antihypertensive use และ TC:HDL ratio
 
-## Method / Model
+## Feature Selection และ Dimensionality Reduction
 
-งานนี้ใช้ Logistic Regression เป็น binary classifier โดยกำหนด class weight เพื่อรับมือ class imbalance:
+Paper เปรียบเทียบ 3 วิธี:
+
+- ANOVA F-test
+- PCA
+- ANOVA F-test ตามด้วย PCA
+
+ANOVA F-test:
+
+- ใช้จัดอันดับ numerical features ตาม discriminative power
+- ใช้ forward top-k strategy เช่น k = 5, 10, 15, ...
+- เลือก k ที่ให้ G-Mean สูงสุดภายใต้ LOOCV
+- ทำแยกสำหรับ Extract Set 1/2/3
+
+PCA:
+
+- Standardize numerical features ก่อนทำ PCA
+- ทดลองจำนวน components หลายค่า
+- เลือกจำนวน components จาก G-Mean ภายใต้ LOOCV
+- ช่วยลด redundancy และ multicollinearity แต่ลด interpretability ของ original features
+
+ANOVA + PCA:
+
+- เลือก top-k features ด้วย ANOVA ก่อน
+- จากนั้นทำ PCA บน selected features
+- ใช้ Logistic Regression ประเมิน performance
+
+## Model
+
+งานนี้ใช้ Logistic Regression เป็น binary classifier:
 
 ```text
 class_weight = "balanced"
 ```
 
-เหตุผลที่เลือก Logistic Regression คือ interpretability, efficiency และเหมาะกับ clinical decision support ที่ต้องการอธิบายผลได้
+เหตุผลที่เลือก:
 
-การ validation ใช้ Leave-One-Out Cross-Validation (LOOCV) โดย hold out ผู้ป่วยทีละคนเป็น test case เพื่อรักษา patient-level independence และลดโอกาส data leakage
+- ตีความได้ง่าย
+- มีประสิทธิภาพพอสำหรับ clinical decision support
+- เหมาะเป็น baseline ที่อธิบายได้
+- ลด bias ต่อ majority class ด้วย `class_weight="balanced"`
 
-## Feature Selection / Dimensionality Reduction
-
-Paper เปรียบเทียบ 3 วิธี:
-
-- ANOVA F-test
-- Principal Component Analysis (PCA)
-- ANOVA F-test ตามด้วย PCA
-
-ANOVA F-test ใช้จัดอันดับ features ตาม discriminative power แล้วเลือก top-k features โดยหา k ที่ให้ G-Mean ดีที่สุด
-
-PCA ใช้ลด redundancy และ multicollinearity ของ temporal features โดยแปลง features เป็น orthogonal components แล้วเลือกจำนวน components ที่เหมาะสมจาก LOOCV
+Validation ใช้ Leave-One-Out Cross-Validation (LOOCV) โดย hold out ผู้ป่วยทีละคนเป็น test case เพื่อรักษา patient-level independence และลดความเสี่ยง data leakage
 
 ## Evaluation Metrics
 
-Metrics ที่ใช้:
+Metrics หลัก:
 
 - Sensitivity
 - Specificity
 - G-Mean
-- McNemar's test สำหรับเปรียบเทียบ paired classifiers
+- McNemar's test
 
-G-Mean เป็น metric หลัก:
+G-Mean:
 
 ```text
 G-Mean = sqrt(Sensitivity * Specificity)
 ```
 
-G-Mean เหมาะกับข้อมูล imbalance เพราะบังคับให้ model ต้องทำได้ดีทั้งกลุ่ม stroke และ non-stroke ไม่ใช่ทาย majority class ได้ดีอย่างเดียว
+เหตุผลที่เน้น G-Mean คือ dataset มี class imbalance สูงมาก หากใช้ accuracy อย่างเดียว โมเดลอาจดูดีเพราะทำนาย majority class ได้ดี แต่ทำงานแย่กับ stroke class
+
+McNemar's test ใช้เทียบ paired classifiers โดยดู disagreement cases ระหว่างโมเดลสองตัว เช่น baseline ทำนายถูกแต่ temporal model ทำนายผิด และ temporal model ทำนายถูกแต่ baseline ทำนายผิด
 
 ## ผลลัพธ์สำคัญ
 
 Temporal model ทำได้ดีกว่า single-shot baseline
 
-- Single-shot baseline ใช้ clinical record ล่าสุดเพียงครั้งเดียว
-- Single-shot baseline มี G-Mean ประมาณ 0.612
-- Temporal model แบบ Extract Set 1, LAST, no reduction มี G-Mean ประมาณ 0.627
-- Extract Set 2, LAST, PCA ได้ G-Mean ประมาณ 0.6385
-- Extract Set 3, LAST, F-ANOVA ได้ G-Mean ประมาณ 0.6367
-- Extract Set 3, LAST, F-ANOVA + PCA ได้ G-Mean ประมาณ 0.6383
+ตัวเลขหลักจาก Table II:
+
+- Single-shot baseline, LAST, no reduction: G-Mean 0.6117
+- Single-shot baseline, LAST, PCA: G-Mean 0.6287
+- Extract Set 1, LAST, no reduction: G-Mean 0.6273
+- Extract Set 1, LAST, PCA: G-Mean 0.6307
+- Extract Set 2, LAST, PCA: G-Mean 0.6385
+- Extract Set 3, LAST, F-ANOVA: G-Mean 0.6367
+- Extract Set 3, LAST, F-ANOVA + PCA: G-Mean 0.6383
 
 ผลที่ดีที่สุดอยู่ประมาณ G-Mean 0.638
 
-McNemar's test พบว่า temporal model ดีกว่า single-shot baseline อย่างมีนัยสำคัญ เช่น:
+McNemar's test:
 
-- Temporal features เทียบกับ single-shot baseline: chi-square = 50.70, p = 7.50e-13
+- Temporal features เทียบกับ single-shot baseline: chi-square = 50.70, p = 7.50 x 10^-13
 - F-ANOVA + PCA เทียบกับ single-shot baseline: chi-square = 7.55, p = 0.006
 
-ผลลัพธ์ตีความได้ว่า temporal information มี predictive value เพิ่มจากการใช้ข้อมูล visit ล่าสุดเพียงครั้งเดียว
+ตีความได้ว่า temporal information มี predictive value เพิ่มจากการใช้ visit ล่าสุดเพียงครั้งเดียวอย่างมีนัยสำคัญ
+
+## การเทียบกับงานก่อนหน้า
+
+Paper ชี้ว่างานก่อนหน้าหลายชิ้นรายงาน accuracy สูงมาก แต่ส่วนใหญ่ใช้ single-shot data หรือใช้ demographic/self-reported attributes เป็นหลัก จึงอาจไม่ได้จับ physiological trajectory จริงจาก EHR
+
+จุดต่างของ paper นี้:
+
+- ใช้ real-world longitudinal EHR
+- ใช้ multi-window temporal representation
+- รวม laboratory measurements
+- เน้นการเปรียบเทียบกับ single-shot baseline
+- ใช้ metrics ที่เหมาะกับ class imbalance
+
+แม้ accuracy/G-Mean ไม่สูงเท่างานบางชิ้น แต่ paper ให้ความสำคัญกับความสมจริงของข้อมูลโรงพยาบาลและการจับ temporal health trajectories
 
 ## ข้อจำกัดของงานวิจัย
 
-- หลังใช้ completeness criteria เหลือ stroke cases เพียง 148 คน
-- ข้อมูลมาจากโรงพยาบาลเดียว จึงยังต้องการ external validation
-- เกณฑ์ต้องมีข้อมูลครบทุก window อาจทำให้ exclude ผู้ป่วยจำนวนมาก และอาจไม่สะท้อนการใช้งานจริงกับ EHR ที่ sparse มาก
-- G-Mean สูงสุดประมาณ 0.638 ยังถือว่าปานกลาง ไม่ใช่ performance ระดับพร้อมใช้งานจริงทันที
-- Logistic Regression อาจจับ nonlinear temporal interaction ได้จำกัด
-- PCA ช่วยลดมิติ แต่ทำให้ interpretability ของ features ลดลง
+- หลังใช้ completeness criteria เหลือ stroke cases เพียง 148 ราย
+- ใช้ข้อมูลจากโรงพยาบาลเดียว จึงยังต้องการ external validation
+- เกณฑ์ต้องมีข้อมูลครบทุก window อาจ exclude ผู้ป่วยจำนวนมาก
+- G-Mean สูงสุดประมาณ 0.638 ยังเป็น performance ระดับปานกลาง ไม่ใช่ระดับพร้อม deploy ทันที
+- Logistic Regression จับ nonlinear temporal interaction ได้จำกัด
+- PCA ช่วยลดมิติ แต่ลด interpretability ของ original features
 
-## สิ่งที่นำมาใช้กับโปรเจกต์ของเราได้
+## สิ่งที่นำมาใช้กับโปรเจกต์ของเรา
 
-แนวคิดที่ควรนำมาใช้:
+ควรใช้ paper นี้เป็น blueprint สำหรับ:
 
-- สร้าง patient-level cohort แทน record-level dataset
-- กำหนด reference date ให้ชัดเจน
-- ลบ post-reference records เพื่อกัน data leakage
-- สร้าง retrospective windows ก่อน stroke event หรือก่อน last visit
-- เปรียบเทียบ single-shot baseline กับ temporal feature model
-- สร้าง features เช่น mean, min, max, standard deviation, first, last, delta และ slope
-- ใช้ G-Mean, sensitivity และ specificity เป็น metrics หลัก เพราะข้อมูล stroke imbalance
-- ใช้ McNemar's test เพื่อเปรียบเทียบ model แบบ paired prediction
-- ใช้ Logistic Regression เป็น interpretable baseline ก่อนต่อยอดไป Random Forest หรือ XGBoost
+- Stage 02: target/cohort/reference date
+- Stage 03: cleaning และ leakage prevention
+- Stage 05: temporal feature engineering
+- Stage 06: interpretable baseline modeling
+- Stage 07: ANOVA/PCA/ANOVA+PCA
+- Stage 08: G-Mean และ McNemar validation
 
-สำหรับ pipeline ของเรา paper นี้เหมาะใช้เป็น blueprint ของ temporal feature engineering โดยเฉพาะขั้นตอน target/cohort construction, leakage prevention และ patient-level validation
+แนวคิดที่ต้องรักษา:
+
+- สร้าง patient-level cohort
+- ใช้ ICD-10 `I60-I68`
+- ลบ post-reference records
+- สร้าง temporal windows FIRST/MID/LAST
+- เก็บ single-shot baseline เป็น comparator เสมอ
+- ใช้ metrics สำหรับ class imbalance
+- รายงาน skipped cases เมื่อ temporal completeness ทำให้ class distribution ไม่พอ
+
+## เทียบกับข้อมูลโปรเจกต์ปัจจุบัน
+
+ข้อมูลของเราเมื่อใช้ strict paper-style windows:
+
+- raw patients: 13,635
+- stroke patients: 969
+- non-stroke patients: 12,666
+- pre-reference records: 194,231
+- temporal-complete patients: 13
+
+ความต่างสำคัญจาก paper:
+
+- Paper เหลือ final cohort 3,976 patients
+- ของเราเหลือ temporal-complete patients เพียง 13 ราย
+- ทำให้ temporal models ใน Stage 06-08 ยัง train/evaluate ไม่ได้จริงตาม paper
+
+ข้อเสนอสำหรับงานถัดไป:
+
+- ทำ sensitivity analysis ด้วย alternative windows เช่น 90/180 วัน
+- ทดลองลดความเข้มของ completeness criteria บางส่วน
+- ตรวจ missingness ต่อ window เพื่อหาสาเหตุที่ temporal-complete cohort หายไปมาก
+- ยังเก็บ paper windows 21-9, 18-6, 15-3 เดือนเป็น baseline หลัก
 
 ## หมายเหตุเพิ่มเติม
 
-Paper นี้มีประโยชน์มากกว่าแค่เป็น related work เพราะเป็นงานที่ใช้ข้อมูล EHR จริงในบริบทโรงพยาบาลไทย และมีปัญหาใกล้กับข้อมูลของเราโดยตรง
+Paper นี้มีประโยชน์มากกว่า related work ทั่วไป เพราะใช้บริบท EHR จริงในโรงพยาบาลไทย และมีปัญหาใกล้กับข้อมูลของโปรเจกต์เราโดยตรง
 
-ประเด็นที่ควรตรวจสอบต่อเมื่อทำงานของเรา:
+จุดที่ต้องตรวจสอบต่อ:
 
-- เรามี visit เพียงพอในแต่ละ temporal window หรือไม่
-- ถ้าใช้ completeness criteria เข้มแบบ paper นี้ sample จะลดลงมากแค่ไหน
-- ควรใช้ window เดียวกัน 21-9, 18-6, 15-3 เดือน หรือปรับเป็น 90 วัน / 180 วัน ตาม target ของเรา
-- ควรทำ sensitivity analysis เทียบหลาย window definitions
-- ควรเพิ่ม model ที่จับ nonlinear pattern ได้ เช่น XGBoost แต่ยังเก็บ Logistic Regression เป็น baseline ที่อธิบายง่าย
+- ข้อมูลของเรามี visit เพียงพอในแต่ละ temporal window หรือไม่
+- ตัวแปร core clinical ครบทุก window หรือขาดเฉพาะบาง lab
+- การใช้ completeness criteria แบบ paper ทำให้เกิด selection bias หรือไม่
+- ควรเพิ่ม model ที่จับ nonlinear pattern ได้ เช่น Random Forest หรือ XGBoost หรือไม่ โดยยังคง Logistic Regression เป็น interpretable baseline

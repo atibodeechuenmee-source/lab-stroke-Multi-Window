@@ -1,84 +1,110 @@
-# งาน: Implement Multi-Window Temporal Stroke-Risk Pipeline
+# งาน: Refactor Temporal Pipeline Orchestrator
 
 ## เป้าหมาย
 
-สร้างโค้ด pipeline จาก `docs/pipeline/00-pipeline-overview.md` เพื่อแปลง raw EHR records เป็น patient-level feature tables สำหรับเปรียบเทียบ single-shot baseline กับ temporal feature models ตาม paper `Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction`
+ปรับ `src/temporal_pipeline.py` จากไฟล์ pipeline รวมที่มี logic ซ้ำ ให้เป็น orchestrator ที่เรียกใช้โค้ดจาก stage modules แยกโดยตรง
 
-## ไฟล์โค้ดที่สร้าง
+เหตุผลหลักคือให้ pipeline รวมและ stage แยกใช้ implementation ชุดเดียวกัน ลดความเสี่ยงที่กติกา target, cleaning, feature engineering, modeling หรือ validation จะต่างกันระหว่างไฟล์
 
-- `src/__init__.py`
+## ไฟล์โค้ดที่เกี่ยวข้อง
+
 - `src/temporal_pipeline.py`
+- `src/raw_data.py`
+- `src/target_cohort.py`
+- `src/data_cleaning.py`
+- `src/eda.py`
+- `src/feature_engineering.py`
+- `src/modeling.py`
+- `src/feature_importance.py`
+- `src/validation.py`
 
-## สิ่งที่โค้ดทำ
+## สิ่งที่เปลี่ยน
 
-โค้ดใน `src/temporal_pipeline.py` ครอบคลุมขั้นตอนหลักตาม overview:
+`src/temporal_pipeline.py` ตอนนี้ทำหน้าที่เป็น orchestrator เท่านั้น:
 
-- โหลด raw EHR data จาก Excel หรือ CSV
-- สร้าง raw data audit เช่น schema, missingness และ column examples
-- ทำ data cleaning เบื้องต้น เช่น date parsing, duplicate removal, numeric coercion, implausible value handling และ binary flag normalization
-- สร้าง patient-level target/cohort จาก ICD-10 `I60-I68`
-- กำหนด `reference date`
-  - stroke patient ใช้ first stroke event
-  - non-stroke patient ใช้ last visit
-- ลบ post-reference records เพื่อกัน data leakage
-- assign temporal windows:
-  - FIRST: 21-9 เดือนก่อน reference date
-  - MID: 18-6 เดือนก่อน reference date
-  - LAST: 15-3 เดือนก่อน reference date
-- ตรวจ temporal completeness
-- สร้าง single-shot baseline จาก latest pre-reference record
-- สร้าง Extract Set 1/2/3 สำหรับ temporal features
-- train Logistic Regression พร้อม `class_weight="balanced"` ถ้าไม่สั่ง `--skip-modeling`
-- ประเมิน sensitivity, specificity, G-Mean, ROC-AUC และ McNemar's test
+- สร้าง output directory แยกตาม stage ใต้ pipeline run เดียวกัน
+- เรียก `run_raw_data_audit()` สำหรับ Stage 01
+- เรียก `run_target_cohort()` สำหรับ Stage 02
+- เรียก `run_data_cleaning()` สำหรับ Stage 03
+- เรียก `run_eda()` สำหรับ Stage 04
+- เรียก `run_feature_engineering()` สำหรับ Stage 05
+- ถ้าไม่ใช้ `--skip-modeling` จะเรียก Stage 06-08 ต่อ:
+  - `run_modeling()`
+  - `run_feature_importance()`
+  - `run_validation()`
+- เขียน `pipeline_manifest.json` ที่รวม summary ของแต่ละ stage
 
 ## วิธีรัน
 
-รันเฉพาะ audit/cohort/features:
+รันถึง Stage 05:
 
 ```powershell
-python -m src.temporal_pipeline --skip-modeling
+.\.venv\Scripts\python.exe -m src.temporal_pipeline --skip-modeling
 ```
 
-รันรวม modeling:
+รันถึง Stage 08:
 
 ```powershell
-python -m src.temporal_pipeline
+.\.venv\Scripts\python.exe -m src.temporal_pipeline
 ```
 
-ระบุ raw path และ output directory เอง:
+รันทดสอบใน output directory แยก:
 
 ```powershell
-python -m src.temporal_pipeline --raw-path data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx --output-dir output/pipeline_runs/temporal_pipeline
+.\.venv\Scripts\python.exe -m src.temporal_pipeline --skip-modeling --output-dir output/pipeline_runs/orchestrator_test
 ```
 
-## Output หลัก
+## ผลทดสอบล่าสุด
 
-Default output อยู่ที่:
+รันทดสอบด้วย:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.temporal_pipeline --skip-modeling --output-dir output/pipeline_runs/orchestrator_test
+```
+
+ผลลัพธ์:
+
+- Stage 01-05 รันสำเร็จ
+- raw rows: 218,772
+- patients: 13,635
+- stroke patients: 969
+- non-stroke patients: 12,666
+- pre-reference records: 194,231
+- temporal-complete patients: 13
+- single-shot rows: 13,635
+- Extract Set 1: 13 rows x 36 columns
+- Extract Set 2: 13 rows x 266 columns
+- Extract Set 3: 13 rows x 272 columns
+- leakage audit ผ่าน (`no_post_reference_records = true`)
+
+## Output
+
+Default output:
 
 ```text
-output/pipeline_runs/temporal_pipeline
+output/pipeline_runs/temporal_pipeline/
 ```
 
-ไฟล์สำคัญ:
+โครง output ใหม่:
 
-- `raw_data_output/raw_schema_summary.csv`
-- `target_cohort_output/patient_level_cohort.csv`
-- `target_cohort_output/pre_reference_records_with_windows.csv`
-- `feature_engineering_output/single_shot.csv`
-- `feature_engineering_output/extract_set_1.csv`
-- `feature_engineering_output/extract_set_2.csv`
-- `feature_engineering_output/extract_set_3.csv`
-- `validation_output/validation_metrics.csv`
-- `pipeline_manifest.json`
+```text
+raw_data_output/
+target_cohort_output/
+data_cleaning_output/
+eda_output/
+feature_engineering_output/
+model_output/
+feature_importance_output/
+validation_output/
+pipeline_manifest.json
+```
 
 ## ข้อควรระวัง
 
-- โค้ดนี้ใช้ temporal windows ตาม paper เป็น default แต่ถ้า dataset จริงมี coverage ไม่พอ ควรทดลอง alternative windows เช่น 90/180 วัน
-- Completeness criteria เข้มมาก เพราะต้องมี visit และ core numeric variables ครบในทุก window
-- Feature selection/PCA stage ยังไม่ได้แยกเป็น module เต็มรูปแบบในรอบนี้ แต่โครง validation และ feature tables พร้อมให้ต่อยอด
-- Modeling ใช้ stratified patient-level CV เป็น default ในโค้ดเพื่อให้รันได้จริงเร็วกว่า LOOCV
+- `output/` เป็น generated artifacts และอาจมี derived patient-level data จึงไม่ควร commit/push
+- การรันจาก raw `.xlsx` ต้องมี `openpyxl` ใน Python environment
+- ถ้า temporal cohort ยังมี positive class น้อยเกินไป Stage 06-08 จะสร้างรายงานแบบ `skipped` ตามเหตุผลเชิงข้อมูล
 
 ## สถานะ
 
-Implemented เป็นโค้ด pipeline เบื้องต้นที่รันได้ต่อจาก raw Excel ของโปรเจกต์ และสอดคล้องกับ overview หลักเรื่อง patient-level cohort, reference date, leakage prevention, temporal windows, single-shot baseline และ Extract Set 1/2/3
-
+Implemented แล้ว และทดสอบผ่านแบบ `--skip-modeling` ด้วย output directory แยก

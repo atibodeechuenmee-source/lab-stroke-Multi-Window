@@ -1,8 +1,12 @@
 """Stage 07 feature importance and dimensionality reduction.
 
-Implements docs/pipeline/07-feature-importance.md. Evaluates ANOVA F-test,
-PCA, and ANOVA+PCA on temporal feature sets with patient-level CV and
-leakage-safe fold-local fitting.
+อธิบายงานแบบย่อ:
+1) อ่าน Extract Set 1/2/3 จาก Stage 05
+2) ประเมิน 3 แนวทาง: ANOVA, PCA, ANOVA+PCA
+3) ใช้ patient-level CV เพื่อคงแนวทางเดียวกับ pipeline หลัก
+4) บังคับให้การ fit scaler/selector/PCA เกิดเฉพาะ training fold
+   เพื่อลดความเสี่ยง data leakage
+5) สรุปผลเป็นตารางพร้อมรายงาน .json/.md
 """
 
 from __future__ import annotations
@@ -49,6 +53,7 @@ def write_json(data: dict, path: Path) -> None:
 
 
 def load_feature_tables(config: FeatureImportanceConfig) -> dict[str, pd.DataFrame]:
+    """โหลด feature table เฉพาะชุด temporal ตามสเปก Stage 07."""
     tables: dict[str, pd.DataFrame] = {}
     for name, filename in FEATURE_FILES.items():
         path = config.feature_dir / filename
@@ -60,6 +65,7 @@ def load_feature_tables(config: FeatureImportanceConfig) -> dict[str, pd.DataFra
 
 
 def load_model_context(config: FeatureImportanceConfig) -> dict[str, object]:
+    """อ่าน context จาก Stage 06 เพื่ออ้างอิงในรายงาน (ถ้ามี)."""
     report_path = config.model_dir / "modeling_report.json"
     if not report_path.exists():
         return {}
@@ -70,10 +76,12 @@ def load_model_context(config: FeatureImportanceConfig) -> dict[str, object]:
 
 
 def g_mean(sensitivity: float, specificity: float) -> float:
+    """คำนวณ G-Mean สำหรับข้อมูล imbalanced."""
     return math.sqrt(max(sensitivity, 0.0) * max(specificity, 0.0))
 
 
 def evaluate_predictions(y_true: list[int], y_pred: list[int]) -> dict[str, float | int]:
+    """คำนวณ confusion-derived metrics ที่ใช้เทียบแต่ละ candidate."""
     from sklearn.metrics import confusion_matrix
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
@@ -91,6 +99,7 @@ def evaluate_predictions(y_true: list[int], y_pred: list[int]) -> dict[str, floa
 
 
 def prepare_xy(table: pd.DataFrame, config: FeatureImportanceConfig) -> tuple[pd.DataFrame, pd.Series]:
+    """เตรียม X/y โดยใช้เฉพาะ numeric features และ target stroke."""
     required = [config.patient_id_col, config.target_col]
     missing = [column for column in required if column not in table.columns]
     if missing:
@@ -103,6 +112,13 @@ def prepare_xy(table: pd.DataFrame, config: FeatureImportanceConfig) -> tuple[pd
 
 
 def choose_cv(y: pd.Series, config: FeatureImportanceConfig):
+    """เลือก CV strategy แบบปลอดภัยต่อ class imbalance.
+
+    - class เดียว: ไม่สามารถ train/evaluate ได้ -> skip
+    - minority class < 2: split ไม่ได้ -> skip
+    - ชุดเล็ก: ใช้ LOOCV
+    - ชุดใหญ่ขึ้น: ใช้ StratifiedKFold ตาม max_folds
+    """
     from sklearn.model_selection import LeaveOneOut, StratifiedKFold
 
     class_counts = y.value_counts()
@@ -118,10 +134,17 @@ def choose_cv(y: pd.Series, config: FeatureImportanceConfig):
 
 
 def sanitize_candidates(max_allowed: int, values: tuple[int, ...]) -> list[int]:
+    """กรอง candidate k/components ให้ไม่เกินจำนวน feature จริง."""
     return sorted({value for value in values if 1 <= value <= max_allowed})
 
 
 def make_pipeline(mode: str, k: int | None, n_components: int | None, config: FeatureImportanceConfig):
+    """ประกอบ sklearn Pipeline ตามโหมดที่กำลังประเมิน.
+
+    หมายเหตุสำคัญ:
+    pipeline นี้จะถูก fit ในแต่ละ training fold เท่านั้น
+    จึงช่วยคุม leakage สำหรับ imputer/scaler/selector/PCA
+    """
     from sklearn.decomposition import PCA
     from sklearn.feature_selection import SelectKBest, f_classif
     from sklearn.impute import SimpleImputer
@@ -168,6 +191,7 @@ def evaluate_candidate(
     k: int | None,
     n_components: int | None,
 ) -> dict[str, object]:
+    """ประเมิน candidate หนึ่งชุด (เช่น k=10 หรือ n_components=5) ด้วย CV."""
     rows: list[dict[str, object]] = []
     for fold_idx, (train_idx, test_idx) in enumerate(cv.split(x, y), start=1):
         model = make_pipeline(mode=mode, k=k, n_components=n_components, config=config)
@@ -185,6 +209,7 @@ def evaluate_candidate(
 
 
 def rank_features_anova(x: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
+    """ทำ global ANOVA ranking เพื่อรายงาน feature importance."""
     from sklearn.feature_selection import f_classif
     from sklearn.impute import SimpleImputer
 
@@ -206,6 +231,15 @@ def run_set_analysis(
     table: pd.DataFrame,
     config: FeatureImportanceConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, object]]:
+    """รันการวิเคราะห์ครบ 3 วิธีสำหรับ extract set เดียว.
+
+    คืนค่าตาราง:
+    - ranking
+    - anova performance
+    - pca performance
+    - anova+pca performance
+    - summary
+    """
     x, y = prepare_xy(table, config)
     cv, cv_name = choose_cv(y, config)
     base_info = {
@@ -217,6 +251,7 @@ def run_set_analysis(
         "cv_strategy": cv_name,
     }
 
+    # ถ้า class distribution ไม่พร้อมหรือไม่มี numeric feature -> ข้ามอย่างโปร่งใส
     if cv is None or x.empty:
         status = "skipped"
         reason = cv_name if cv is None else "not_run_no_numeric_features"
@@ -228,12 +263,14 @@ def run_set_analysis(
     k_candidates = sanitize_candidates(x.shape[1], config.top_k_candidates)
     pca_candidates = sanitize_candidates(x.shape[1], config.pca_component_candidates)
 
+    # 1) ANOVA: วนลองหลายค่า k แล้วเก็บ metric
     anova_rows = []
     for k in k_candidates:
         metrics = evaluate_candidate(x, y, cv, config, mode="anova", k=k, n_components=None)
         anova_rows.append({"set_name": set_name, "method": "anova", "k": int(k), "n_components": np.nan, **metrics})
     anova_table = pd.DataFrame(anova_rows).sort_values("g_mean", ascending=False).reset_index(drop=True)
 
+    # 2) PCA: วนลองหลายจำนวน components แล้วเก็บ metric
     pca_rows = []
     for n_comp in pca_candidates:
         metrics = evaluate_candidate(x, y, cv, config, mode="pca", k=None, n_components=n_comp)
@@ -242,6 +279,7 @@ def run_set_analysis(
         )
     pca_table = pd.DataFrame(pca_rows).sort_values("g_mean", ascending=False).reset_index(drop=True)
 
+    # 3) ANOVA+PCA: เลือก top-k ก่อน แล้วค่อยลดมิติด้วย PCA
     combo_rows = []
     for k in k_candidates:
         valid_components = sanitize_candidates(k, config.pca_component_candidates)
@@ -258,6 +296,7 @@ def run_set_analysis(
             )
     combo_table = pd.DataFrame(combo_rows).sort_values("g_mean", ascending=False).reset_index(drop=True)
 
+    # สรุป best candidate ของแต่ละวิธีเพื่อใช้ในรายงาน validation ภายหลัง
     best_rows = []
     if not anova_table.empty:
         best_rows.append(anova_table.iloc[0].to_dict())
@@ -288,6 +327,7 @@ def build_markdown_report(
     model_context: dict[str, object],
     output_dir: Path,
 ) -> str:
+    """สร้างรายงาน markdown ให้ทีมอ่านผลเร็วโดยไม่เปิด CSV ทุกไฟล์."""
     completed = summary_df[summary_df["status"] == "completed"] if "status" in summary_df else pd.DataFrame()
     skipped = summary_df[summary_df["status"] == "skipped"] if "status" in summary_df else pd.DataFrame()
 
@@ -339,6 +379,13 @@ def build_markdown_report(
 
 
 def run_feature_importance(config: FeatureImportanceConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 07.
+
+    ลำดับงาน:
+    1) โหลดข้อมูล
+    2) วิเคราะห์ทีละ extract set
+    3) เขียน artifacts ทั้งตารางละเอียดและ summary
+    """
     config.output_dir.mkdir(parents=True, exist_ok=True)
     tables = load_feature_tables(config)
     model_context = load_model_context(config)
@@ -351,6 +398,7 @@ def run_feature_importance(config: FeatureImportanceConfig) -> dict[str, object]
     summary_rows = []
 
     for set_name, table in tables.items():
+        # ประมวลผลแต่ละชุดแยกกัน เพื่อให้ trace/debug ง่าย
         result = run_set_analysis(set_name=set_name, table=table, config=config)
         if len(result) == 6:
             ranking, anova_table, pca_table, combo_table, best_table, summary = result
@@ -394,6 +442,7 @@ def run_feature_importance(config: FeatureImportanceConfig) -> dict[str, object]
 
 
 def parse_args() -> argparse.Namespace:
+    """รองรับการรันผ่าน CLI และ override path ได้."""
     parser = argparse.ArgumentParser(description="Run Stage 07 feature importance.")
     parser.add_argument("--feature-dir", default=str(FeatureImportanceConfig.feature_dir))
     parser.add_argument("--model-dir", default=str(FeatureImportanceConfig.model_dir))

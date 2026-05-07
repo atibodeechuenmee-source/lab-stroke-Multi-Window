@@ -1,8 +1,12 @@
 """Stage 08 validation for temporal stroke-risk prediction.
 
-Implements docs/pipeline/08-validation.md. Aggregates model predictions and
-metrics, computes validation tables, runs McNemar's test when possible, and
-builds leakage/attrition evidence for paper-style reporting.
+ภาพรวมงาน:
+1) รวม prediction จาก Stage 06
+2) คำนวณ metrics หลัก (sensitivity, specificity, G-Mean)
+3) คำนวณ ROC-AUC/PR-AUC เมื่อมี probability
+4) เปรียบเทียบ baseline กับ temporal model
+5) รัน McNemar's test เมื่อมีข้อมูล paired prediction เพียงพอ
+6) รวมหลักฐาน leakage audit + cohort attrition สำหรับรายงานตามแนว paper
 """
 
 from __future__ import annotations
@@ -48,10 +52,12 @@ def load_optional_csv(path: Path) -> pd.DataFrame:
 
 
 def g_mean(sensitivity: float, specificity: float) -> float:
+    """คำนวณ G-Mean ซึ่งเหมาะกับโจทย์ class imbalance."""
     return math.sqrt(max(sensitivity, 0.0) * max(specificity, 0.0))
 
 
 def evaluate_predictions(pred: pd.DataFrame, config: ValidationConfig) -> dict[str, object]:
+    """คำนวณ metric ของ prediction table หนึ่งโมเดล."""
     from sklearn.metrics import average_precision_score, confusion_matrix, roc_auc_score
 
     y_true = pred[config.target_col].astype(int).tolist()
@@ -70,6 +76,7 @@ def evaluate_predictions(pred: pd.DataFrame, config: ValidationConfig) -> dict[s
         "roc_auc": float("nan"),
         "pr_auc": float("nan"),
     }
+    # ROC-AUC/PR-AUC จะคำนวณได้ก็ต่อเมื่อมี probability output และมีครบ 2 classes
     if config.prob_col in pred.columns:
         y_prob = pred[config.prob_col].astype(float).tolist()
         if len(set(y_true)) == 2:
@@ -79,6 +86,7 @@ def evaluate_predictions(pred: pd.DataFrame, config: ValidationConfig) -> dict[s
 
 
 def load_prediction_tables(config: ValidationConfig) -> dict[str, pd.DataFrame]:
+    """โหลดไฟล์ *_predictions.csv ต่อโมเดลจาก Stage 06."""
     tables: dict[str, pd.DataFrame] = {}
     for path in sorted(config.model_dir.glob("*_predictions.csv")):
         if path.name == "all_model_predictions.csv":
@@ -93,6 +101,7 @@ def load_prediction_tables(config: ValidationConfig) -> dict[str, pd.DataFrame]:
 
 
 def build_metrics_table(prediction_tables: dict[str, pd.DataFrame], config: ValidationConfig) -> pd.DataFrame:
+    """รวม metric ของทุกโมเดลไว้ในตารางเดียวเพื่อจัดอันดับด้วย G-Mean."""
     rows = []
     for model_name, table in prediction_tables.items():
         metrics = evaluate_predictions(table, config)
@@ -104,12 +113,14 @@ def build_metrics_table(prediction_tables: dict[str, pd.DataFrame], config: Vali
 
 
 def build_confusion_table(metrics_table: pd.DataFrame) -> pd.DataFrame:
+    """แยก confusion matrix ออกมาเป็นตารางที่อ่านง่าย."""
     if metrics_table.empty:
         return pd.DataFrame(columns=["model_name", "tn", "fp", "fn", "tp"])
     return metrics_table[["model_name", "tn", "fp", "fn", "tp"]].copy()
 
 
 def choose_best_temporal_model(metrics_table: pd.DataFrame, baseline_name: str) -> str:
+    """เลือก temporal model ที่ดีที่สุด (ไม่นับ baseline) ด้วย G-Mean."""
     if metrics_table.empty:
         return ""
     temporal = metrics_table[metrics_table["model_name"] != baseline_name]
@@ -123,6 +134,12 @@ def mcnemar_test(
     challenger_pred: pd.DataFrame,
     config: ValidationConfig,
 ) -> dict[str, object]:
+    """คำนวณ McNemar's test สำหรับ baseline vs challenger.
+
+    ใช้ continuity-corrected chi-square:
+        (|b-c|-1)^2 / (b+c)
+    และประมาณ p-value จาก chi-square df=1
+    """
     merged = baseline_pred[[config.patient_id_col, config.target_col, config.pred_col]].rename(
         columns={config.pred_col: "baseline_pred"}
     ).merge(
@@ -132,6 +149,7 @@ def mcnemar_test(
         on=[config.patient_id_col, config.target_col],
         how="inner",
     )
+    # ถ้าไม่มีผู้ป่วยซ้อนกันระหว่าง 2 โมเดล จะเทียบแบบ paired ไม่ได้
     if merged.empty:
         return {
             "status": "skipped",
@@ -143,6 +161,7 @@ def mcnemar_test(
     b = int((baseline_correct & ~challenger_correct).sum())
     c = int((~baseline_correct & challenger_correct).sum())
     total = b + c
+    # ไม่มี disagreement (b+c = 0) หมายถึง test ไม่ให้ข้อมูลเพิ่มเติมเชิงสถิติ
     if total == 0:
         return {
             "status": "skipped",
@@ -166,6 +185,7 @@ def mcnemar_test(
 
 
 def build_leakage_audit(config: ValidationConfig) -> pd.DataFrame:
+    """สร้างหลักฐาน leakage audit สำหรับ validation report."""
     leakage = load_optional_csv(config.eda_dir / "leakage_audit_summary.csv")
     rows = []
     if leakage.empty:
@@ -186,6 +206,7 @@ def build_leakage_audit(config: ValidationConfig) -> pd.DataFrame:
             }
         )
 
+    # ถ้า Stage 07 มีผลลัพธ์ จะถือว่ามีร่องรอยการทำ fold-local feature processing
     fi_summary = load_optional_csv(config.feature_importance_dir / "feature_importance_summary.csv")
     rows.append(
         {
@@ -198,6 +219,7 @@ def build_leakage_audit(config: ValidationConfig) -> pd.DataFrame:
 
 
 def build_attrition_summary(config: ValidationConfig) -> pd.DataFrame:
+    """สำรอง helper สำหรับ attrition view (เผื่อเปลี่ยนแหล่งข้อมูลในอนาคต)."""
     attrition = load_optional_csv(config.cohort_dir / "cohort_attrition_report.csv")
     if not attrition.empty:
         return attrition.copy()
@@ -209,6 +231,7 @@ def build_attrition_summary(config: ValidationConfig) -> pd.DataFrame:
 
 
 def build_report_markdown(summary: dict[str, object], mcnemar: dict[str, object]) -> str:
+    """เรนเดอร์รายงาน markdown สรุปผล Stage 08."""
     mcnemar_line = (
         f"McNemar completed: chi-square `{mcnemar.get('chi_square', float('nan')):.4f}`, "
         f"p-value `{mcnemar.get('p_value', float('nan')):.6f}`."
@@ -248,6 +271,16 @@ def build_report_markdown(summary: dict[str, object], mcnemar: dict[str, object]
 
 
 def run_validation(config: ValidationConfig) -> dict[str, object]:
+    """entrypoint หลักของ Stage 08.
+
+    ลำดับงาน:
+    1) โหลด prediction tables
+    2) คำนวณ metrics + confusion + auc tables
+    3) ทำ baseline-vs-temporal comparison
+    4) รัน McNemar (ถ้าเป็นไปได้)
+    5) สร้าง leakage/attrition reports
+    6) เขียน summary และ markdown report
+    """
     config.output_dir.mkdir(parents=True, exist_ok=True)
     prediction_tables = load_prediction_tables(config)
     metrics_table = build_metrics_table(prediction_tables, config)
@@ -264,6 +297,7 @@ def run_validation(config: ValidationConfig) -> dict[str, object]:
     if not comparison.empty:
         comparison["model_group"] = np.where(comparison["model_name"] == baseline_name, "baseline", "temporal")
 
+    # รัน McNemar ได้ก็ต่อเมื่อมี baseline และ temporal challenger ที่เป็นรูปแบบ paired
     if baseline_name in prediction_tables and best_temporal:
         mcnemar = mcnemar_test(prediction_tables[baseline_name], prediction_tables[best_temporal], config)
         mcnemar["baseline_model"] = baseline_name
@@ -277,6 +311,7 @@ def run_validation(config: ValidationConfig) -> dict[str, object]:
         }
 
     leakage_audit = build_leakage_audit(config)
+    # cohort attrition สำคัญมากต่อการตีความผล เพราะ strict windows อาจลด sample size มาก
     attrition_view = load_optional_csv(config.cohort_dir / "cohort_attrition_report.csv")
     if attrition_view.empty:
         attrition_view = pd.DataFrame(
@@ -321,6 +356,7 @@ def run_validation(config: ValidationConfig) -> dict[str, object]:
 
 
 def parse_args() -> argparse.Namespace:
+    """รองรับการรันแบบ CLI และปรับ path ตาม environment ได้."""
     parser = argparse.ArgumentParser(description="Run Stage 08 validation.")
     parser.add_argument("--model-dir", default=str(ValidationConfig.model_dir))
     parser.add_argument("--feature-importance-dir", default=str(ValidationConfig.feature_importance_dir))

@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pipeline outputs are generated artifacts. Existing tracked snapshots remain tracked,
+# but new local runs should not be added accidentally.
+output/
+

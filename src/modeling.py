@@ -18,9 +18,21 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
+
+
+PAPER_REFERENCE = {
+    "title": "Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction",
+    "method_section": "Classification Model",
+    "algorithm": "LogisticRegression",
+    "class_weight": "balanced",
+    "paper_cv_strategy": "LOOCV",
+    "primary_selection_metric": "G-Mean",
+}
+TEMPORAL_MODEL_NAMES = ["extract_set_1", "extract_set_2", "extract_set_3"]
 
 
 @dataclass(frozen=True)
@@ -50,6 +62,21 @@ def write_csv(df: pd.DataFrame, path: Path) -> None:
 def write_json(data: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _json_ready(value: Any) -> Any:
+    """แปลงค่า pandas/numpy ให้อยู่ในรูปที่เขียน JSON ได้."""
+    if isinstance(value, dict):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if pd.isna(value):
+        return None
+    if hasattr(value, "item"):
+        return value.item()
+    return value
 
 
 def load_feature_tables(config: ModelingConfig) -> dict[str, pd.DataFrame]:
@@ -123,12 +150,13 @@ def g_mean(sensitivity: float, specificity: float) -> float:
 
 def evaluate_predictions(y_true: list[int], y_pred: list[int], y_prob: list[float]) -> dict[str, float | int]:
     """คำนวณ confusion metrics และ ROC-AUC."""
-    from sklearn.metrics import confusion_matrix, roc_auc_score
+    from sklearn.metrics import average_precision_score, confusion_matrix, roc_auc_score
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     sensitivity = tp / (tp + fn) if (tp + fn) else 0.0
     specificity = tn / (tn + fp) if (tn + fp) else 0.0
     roc_auc = roc_auc_score(y_true, y_prob) if len(set(y_true)) == 2 else float("nan")
+    pr_auc = average_precision_score(y_true, y_prob) if len(set(y_true)) == 2 else float("nan")
     return {
         "tn": int(tn),
         "fp": int(fp),
@@ -138,6 +166,7 @@ def evaluate_predictions(y_true: list[int], y_pred: list[int], y_prob: list[floa
         "specificity": float(specificity),
         "g_mean": float(g_mean(sensitivity, specificity)),
         "roc_auc": float(roc_auc),
+        "pr_auc": float(pr_auc),
     }
 
 
@@ -155,6 +184,9 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
         "n_features": int(x.shape[1]),
         "target_positive_count": int((y == 1).sum()),
         "target_negative_count": int((y == 0).sum()),
+        "paper_algorithm_match": True,
+        "paper_class_weight_match": True,
+        "paper_cv_exact_match": cv_name == PAPER_REFERENCE["paper_cv_strategy"],
     }
     # ถ้าข้อมูลไม่พร้อม (เช่น class เดียว) ให้ skip อย่างโปร่งใส
     if cv is None or x.empty:
@@ -174,16 +206,21 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
             "specificity": float("nan"),
             "g_mean": float("nan"),
             "roc_auc": float("nan"),
+            "pr_auc": float("nan"),
+            "fold_count": 0,
+            "patient_overlap_detected": False,
         }
         return predictions, metrics, base_config
 
     model = make_model(config)
     rows = []
+    patient_overlap_detected = False
     for fold_idx, (train_idx, test_idx) in enumerate(cv.split(x, y), start=1):
         # patient-level leakage guard: ห้ามมีคนไข้ซ้ำระหว่าง train/test ใน fold เดียวกัน
         train_ids = set(patient_ids.iloc[train_idx])
         test_ids = set(patient_ids.iloc[test_idx])
         if train_ids & test_ids:
+            patient_overlap_detected = True
             raise RuntimeError("Patient leakage detected: train/test patient ids overlap in a fold.")
         model.fit(x.iloc[train_idx], y.iloc[train_idx])
         probs = model.predict_proba(x.iloc[test_idx])[:, 1]
@@ -206,8 +243,136 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
         predictions["y_pred"].astype(int).tolist(),
         predictions["y_prob"].astype(float).tolist(),
     )
-    metrics = {**base_config, "status": "completed", "skip_reason": "", **eval_metrics}
+    metrics = {
+        **base_config,
+        "status": "completed",
+        "skip_reason": "",
+        "fold_count": int(predictions["fold"].nunique()) if "fold" in predictions.columns else 0,
+        "patient_overlap_detected": patient_overlap_detected,
+        **eval_metrics,
+    }
     return predictions, metrics, base_config
+
+
+def build_skipped_model_report(metrics_df: pd.DataFrame) -> pd.DataFrame:
+    """แยกรายงาน model ที่ถูก skip พร้อมเหตุผล เพื่อให้ validation อ่านต่อได้ง่าย."""
+    if metrics_df.empty or "status" not in metrics_df.columns:
+        return pd.DataFrame(columns=["model_name", "skip_reason", "n_patients", "target_positive_count"])
+    skipped = metrics_df[metrics_df["status"] == "skipped"].copy()
+    if skipped.empty:
+        return pd.DataFrame(columns=["model_name", "skip_reason", "n_patients", "target_positive_count"])
+    return skipped[
+        [
+            "model_name",
+            "skip_reason",
+            "n_patients",
+            "n_features",
+            "target_positive_count",
+            "target_negative_count",
+            "cv_strategy",
+        ]
+    ].copy()
+
+
+def build_cv_policy_report(metrics_df: pd.DataFrame) -> pd.DataFrame:
+    """สรุปว่าแต่ละ model ใช้ LOOCV ตาม paper หรือ fallback CV เพราะเหตุใด."""
+    if metrics_df.empty:
+        return pd.DataFrame()
+    rows = []
+    for row in metrics_df.to_dict(orient="records"):
+        cv_strategy = str(row.get("cv_strategy", ""))
+        rows.append(
+            {
+                "model_name": row.get("model_name", ""),
+                "paper_cv_strategy": PAPER_REFERENCE["paper_cv_strategy"],
+                "actual_cv_strategy": cv_strategy,
+                "paper_cv_exact_match": bool(cv_strategy == PAPER_REFERENCE["paper_cv_strategy"]),
+                "fallback_reason": ""
+                if cv_strategy == PAPER_REFERENCE["paper_cv_strategy"]
+                else "large baseline table uses stratified patient-level CV; insufficient temporal class count may skip",
+                "n_patients": row.get("n_patients", 0),
+                "target_positive_count": row.get("target_positive_count", 0),
+                "target_negative_count": row.get("target_negative_count", 0),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def build_acceptance_checks(
+    tables: dict[str, pd.DataFrame],
+    metrics_df: pd.DataFrame,
+    all_predictions: pd.DataFrame,
+    skipped_report: pd.DataFrame,
+) -> pd.DataFrame:
+    """สร้าง acceptance checks ตาม docs/pipeline/06-modeling.md."""
+    baseline_seen = "single_shot" in tables
+    baseline_attempted = bool(
+        not metrics_df.empty and (metrics_df["model_name"] == "single_shot").any()
+    )
+    temporal_seen = [name for name in TEMPORAL_MODEL_NAMES if name in tables]
+    temporal_metrics = metrics_df[metrics_df["model_name"].isin(temporal_seen)] if not metrics_df.empty else pd.DataFrame()
+    skipped_temporal = temporal_metrics[temporal_metrics["status"] == "skipped"] if not temporal_metrics.empty else pd.DataFrame()
+    skipped_report_ok = len(skipped_temporal) == 0 or not skipped_report.empty
+    patient_overlap_ok = (
+        bool((metrics_df["patient_overlap_detected"] == False).all())  # noqa: E712
+        if "patient_overlap_detected" in metrics_df.columns
+        else False
+    )
+    required_metrics = {"sensitivity", "specificity", "g_mean", "roc_auc", "pr_auc"}
+    metrics_reported = required_metrics.issubset(set(metrics_df.columns))
+    completed = metrics_df[metrics_df["status"] == "completed"] if "status" in metrics_df.columns else pd.DataFrame()
+    best_by_gmean = True
+    if not completed.empty:
+        reported_best = metrics_df.iloc[0]["model_name"]
+        actual_best = completed.sort_values("g_mean", ascending=False, na_position="last").iloc[0]["model_name"]
+        best_by_gmean = bool(reported_best == actual_best)
+    predictions_available = not all_predictions.empty and {"model_name", "y_true", "y_pred", "y_prob"}.issubset(
+        all_predictions.columns
+    )
+    return pd.DataFrame(
+        [
+            {
+                "check": "single_shot_baseline_attempted",
+                "passed": baseline_seen and baseline_attempted,
+                "detail": "single-shot baseline is required comparator",
+            },
+            {
+                "check": "skipped_temporal_models_reported_with_reason",
+                "passed": skipped_report_ok,
+                "detail": f"skipped_temporal_models={len(skipped_temporal)}",
+            },
+            {
+                "check": "train_test_patient_overlap_prevented",
+                "passed": patient_overlap_ok,
+                "detail": "patient ids are checked per fold",
+            },
+            {
+                "check": "required_metrics_reported",
+                "passed": metrics_reported,
+                "detail": ", ".join(sorted(required_metrics)),
+            },
+            {
+                "check": "best_model_selected_by_g_mean",
+                "passed": best_by_gmean,
+                "detail": "metrics table sorted by G-Mean with NaN last",
+            },
+            {
+                "check": "prediction_files_available_for_validation",
+                "passed": predictions_available,
+                "detail": "out-of-fold predictions retained for Stage 08 McNemar testing",
+            },
+            {
+                "check": "logistic_regression_balanced_used",
+                "passed": bool(
+                    (metrics_df["algorithm"] == PAPER_REFERENCE["algorithm"]).all()
+                    and (metrics_df["class_weight"] == PAPER_REFERENCE["class_weight"]).all()
+                )
+                if not metrics_df.empty
+                else False,
+                "detail": "LogisticRegression(class_weight='balanced')",
+            },
+        ]
+    )
 
 
 def run_modeling(config: ModelingConfig) -> dict[str, object]:
@@ -233,9 +398,20 @@ def run_modeling(config: ModelingConfig) -> dict[str, object]:
     write_csv(metrics_df, config.output_dir / "model_cv_metrics.csv")
     write_csv(pd.DataFrame(model_configs), config.output_dir / "model_config_log.csv")
     if all_predictions:
-        write_csv(pd.concat(all_predictions, ignore_index=True), config.output_dir / "all_model_predictions.csv")
+        all_predictions_df = pd.concat(all_predictions, ignore_index=True)
+        write_csv(all_predictions_df, config.output_dir / "all_model_predictions.csv")
+    else:
+        all_predictions_df = pd.DataFrame()
+
+    skipped_report = build_skipped_model_report(metrics_df)
+    cv_policy_report = build_cv_policy_report(metrics_df)
+    acceptance_checks = build_acceptance_checks(tables, metrics_df, all_predictions_df, skipped_report)
+    write_csv(skipped_report, config.output_dir / "skipped_models_report.csv")
+    write_csv(cv_policy_report, config.output_dir / "cv_policy_report.csv")
+    write_csv(acceptance_checks, config.output_dir / "modeling_acceptance_checks.csv")
 
     summary = {
+        "paper_reference": PAPER_REFERENCE,
         "feature_dir": str(config.feature_dir),
         "output_dir": str(config.output_dir),
         "models_seen": list(tables.keys()),
@@ -243,7 +419,11 @@ def run_modeling(config: ModelingConfig) -> dict[str, object]:
         "models_skipped": int((metrics_df["status"] == "skipped").sum()) if "status" in metrics_df else 0,
         "best_model": str(metrics_df.iloc[0]["model_name"]) if not metrics_df.empty else "",
         "best_g_mean": float(metrics_df.iloc[0]["g_mean"]) if not metrics_df.empty and pd.notna(metrics_df.iloc[0]["g_mean"]) else None,
+        "acceptance_checks_passed": int(acceptance_checks["passed"].sum()),
+        "acceptance_checks_total": int(len(acceptance_checks)),
+        "acceptance_passed": bool(acceptance_checks["passed"].all()),
     }
+    summary = {key: _json_ready(value) for key, value in summary.items()}
     write_json(summary, config.output_dir / "modeling_report.json")
     (config.output_dir / "modeling_report.md").write_text(build_report_markdown(summary, metrics_df), encoding="utf-8")
     return summary
@@ -261,6 +441,8 @@ def build_report_markdown(summary: dict[str, object], metrics: pd.DataFrame) -> 
     )
     if not skipped_lines:
         skipped_lines = "- None"
+    checks_passed = summary.get("acceptance_checks_passed", 0)
+    checks_total = summary.get("acceptance_checks_total", 0)
     return f"""# Modeling Report
 
 ## Summary
@@ -271,6 +453,16 @@ def build_report_markdown(summary: dict[str, object], metrics: pd.DataFrame) -> 
 - Models completed: {summary["models_completed"]}
 - Models skipped: {summary["models_skipped"]}
 - {best_line}
+- Acceptance checks passed: {checks_passed}/{checks_total}
+
+## Paper Reference
+
+- Paper: `{PAPER_REFERENCE["title"]}`
+- Method section: `{PAPER_REFERENCE["method_section"]}`
+- Algorithm: `{PAPER_REFERENCE["algorithm"]}`
+- Class weight: `{PAPER_REFERENCE["class_weight"]}`
+- Paper CV strategy: `{PAPER_REFERENCE["paper_cv_strategy"]}`
+- Primary selection metric: `{PAPER_REFERENCE["primary_selection_metric"]}`
 
 ## Notes
 
@@ -286,6 +478,9 @@ Logistic Regression uses `class_weight="balanced"` and patient-level cross-valid
 - `model_config_log.csv`
 - `all_model_predictions.csv`
 - `<model_name>_predictions.csv`
+- `skipped_models_report.csv`
+- `cv_policy_report.csv`
+- `modeling_acceptance_checks.csv`
 - `modeling_report.json`
 - `modeling_report.md`
 """

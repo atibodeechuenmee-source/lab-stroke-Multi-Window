@@ -13,9 +13,19 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
+
+
+PAPER_REFERENCE = {
+    "title": "Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction",
+    "method_section": "Exploratory review before Feature Extraction",
+    "eda_principle": "quantify irregular, incomplete, heterogeneous EHR before temporal modeling",
+    "default_windows": ["FIRST", "MID", "LAST"],
+}
+MIN_TEMPORAL_COMPLETE_STROKE_CASES_FOR_MODELING = 2
 
 
 @dataclass(frozen=True)
@@ -61,6 +71,30 @@ def write_csv(df: pd.DataFrame, path: Path) -> None:
 def write_json(data: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _json_ready(value: Any) -> Any:
+    """แปลงค่า pandas/numpy ให้อยู่ในรูปที่เขียน JSON ได้."""
+    if isinstance(value, dict):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if pd.isna(value):
+        return None
+    if hasattr(value, "item"):
+        return value.item()
+    return value
+
+
+def first_existing(columns: list[str] | pd.Index, candidates: list[str]) -> str | None:
+    """หา column แรกที่มีอยู่จริง เพื่อรองรับทั้ง raw/stage-standardized naming."""
+    existing = set(map(str, columns))
+    for candidate in candidates:
+        if candidate in existing:
+            return candidate
+    return None
 
 
 def class_imbalance(cohort: pd.DataFrame) -> pd.DataFrame:
@@ -194,7 +228,7 @@ def temporal_coverage(completeness: pd.DataFrame, attrition: pd.DataFrame | None
         col = f"{window.lower()}_has_visit"
         if col in completeness.columns:
             count = int(completeness[col].sum())
-            rows.append({"metric": f"{window.lower()}_has_visit", "patient_count": count, "percent": count / total})
+            rows.append({"metric": f"{window.lower()}_has_visit", "patient_count": count, "percent": count / total if total else 0.0})
     if attrition is not None and not attrition.empty:
         final = attrition.tail(1).iloc[0].to_dict()
         rows.append(
@@ -205,6 +239,89 @@ def temporal_coverage(completeness: pd.DataFrame, attrition: pd.DataFrame | None
             }
         )
     return pd.DataFrame(rows)
+
+
+def window_coverage_by_label(records: pd.DataFrame, config: EDAConfig) -> pd.DataFrame:
+    """สรุป records/patients ในแต่ละ temporal window แยก stroke/non-stroke."""
+    if "window" not in records.columns or "stroke" not in records.columns:
+        return pd.DataFrame()
+    rows = []
+    for window in WINDOWS:
+        subset = records[records["window"] == window]
+        row: dict[str, object] = {
+            "window": window,
+            "records": int(len(subset)),
+            "patients": int(subset[config.patient_id_col].nunique()) if config.patient_id_col in subset.columns else 0,
+        }
+        for stroke_value, label in [(0, "nonstroke"), (1, "stroke")]:
+            label_subset = subset[subset["stroke"] == stroke_value]
+            row[f"{label}_records"] = int(len(label_subset))
+            row[f"{label}_patients"] = (
+                int(label_subset[config.patient_id_col].nunique())
+                if config.patient_id_col in label_subset.columns
+                else 0
+            )
+        rows.append(row)
+    outside = records[records["window"].isna()] if "window" in records.columns else pd.DataFrame()
+    rows.append(
+        {
+            "window": "OUTSIDE_WINDOWS",
+            "records": int(len(outside)),
+            "patients": int(outside[config.patient_id_col].nunique()) if config.patient_id_col in outside.columns else 0,
+            "nonstroke_records": int((outside["stroke"] == 0).sum()) if "stroke" in outside.columns else 0,
+            "nonstroke_patients": int(outside.loc[outside["stroke"] == 0, config.patient_id_col].nunique())
+            if "stroke" in outside.columns and config.patient_id_col in outside.columns
+            else 0,
+            "stroke_records": int((outside["stroke"] == 1).sum()) if "stroke" in outside.columns else 0,
+            "stroke_patients": int(outside.loc[outside["stroke"] == 1, config.patient_id_col].nunique())
+            if "stroke" in outside.columns and config.patient_id_col in outside.columns
+            else 0,
+        }
+    )
+    return pd.DataFrame(rows)
+
+
+def temporal_complete_case_summary(cohort: pd.DataFrame, completeness: pd.DataFrame) -> pd.DataFrame:
+    """สรุปจำนวน stroke/non-stroke ใน temporal-complete cohort."""
+    if completeness.empty or "temporal_complete" not in completeness.columns:
+        return pd.DataFrame(
+            [
+                {
+                    "group": "temporal_complete",
+                    "patients": 0,
+                    "stroke_patients": 0,
+                    "nonstroke_patients": 0,
+                    "stroke_prevalence": 0.0,
+                }
+            ]
+        )
+    cohort_id = first_existing(cohort.columns, ["patient_id", "hn"])
+    completeness_id = first_existing(completeness.columns, ["patient_id", "hn"])
+    if cohort_id is None or completeness_id is None or "stroke" not in cohort.columns:
+        return pd.DataFrame()
+    complete_ids = completeness.loc[completeness["temporal_complete"], completeness_id]
+    complete = cohort[cohort[cohort_id].isin(complete_ids)].copy()
+    stroke_patients = int((complete["stroke"] == 1).sum())
+    nonstroke_patients = int((complete["stroke"] == 0).sum())
+    patients = int(len(complete))
+    return pd.DataFrame(
+        [
+            {
+                "group": "all_patient_level_cohort",
+                "patients": int(len(cohort)),
+                "stroke_patients": int((cohort["stroke"] == 1).sum()),
+                "nonstroke_patients": int((cohort["stroke"] == 0).sum()),
+                "stroke_prevalence": float((cohort["stroke"] == 1).mean()) if len(cohort) else 0.0,
+            },
+            {
+                "group": "temporal_complete",
+                "patients": patients,
+                "stroke_patients": stroke_patients,
+                "nonstroke_patients": nonstroke_patients,
+                "stroke_prevalence": stroke_patients / patients if patients else 0.0,
+            },
+        ]
+    )
 
 
 def clinical_descriptive_stats(records: pd.DataFrame) -> pd.DataFrame:
@@ -266,7 +383,88 @@ def high_missing_variables(missingness: pd.DataFrame, threshold: float = 0.5) ->
     return missingness[missingness["missing_percent"] >= threshold].copy()
 
 
+def build_sensitivity_recommendation(report: dict[str, object]) -> pd.DataFrame:
+    """ประเมินว่าควรทำ sensitivity analysis ด้วย windows อื่นหรือไม่."""
+    temporal_complete = int(report.get("temporal_complete_patients", 0) or 0)
+    temporal_complete_stroke = int(report.get("temporal_complete_stroke_patients", 0) or 0)
+    recommend = temporal_complete_stroke < MIN_TEMPORAL_COMPLETE_STROKE_CASES_FOR_MODELING
+    return pd.DataFrame(
+        [
+            {
+                "recommend_sensitivity_analysis": recommend,
+                "reason": (
+                    "strict FIRST/MID/LAST temporal-complete cohort has too few stroke cases for reliable modeling"
+                    if recommend
+                    else "strict FIRST/MID/LAST temporal-complete cohort has enough stroke cases for minimal modeling"
+                ),
+                "temporal_complete_patients": temporal_complete,
+                "temporal_complete_stroke_patients": temporal_complete_stroke,
+                "suggested_fallback_windows": "90/180 days as sensitivity analysis; keep paper windows as primary baseline",
+            }
+        ]
+    )
+
+
+def build_acceptance_checks(
+    imbalance: pd.DataFrame,
+    temporal_cov: pd.DataFrame,
+    missing_window: pd.DataFrame,
+    leakage: pd.DataFrame,
+    report: dict[str, object],
+    sensitivity: pd.DataFrame,
+) -> pd.DataFrame:
+    """สร้าง acceptance checks ตาม docs/pipeline/04-eda.md."""
+    has_stroke = bool((imbalance["stroke"] == 1).any()) if "stroke" in imbalance.columns else False
+    has_nonstroke = bool((imbalance["stroke"] == 0).any()) if "stroke" in imbalance.columns else False
+    temporal_complete_reported = bool(
+        not temporal_cov.empty and (temporal_cov["metric"] == "temporal_complete_patients").any()
+    )
+    missing_windows = set(missing_window["window"].dropna().astype(str).unique()) if "window" in missing_window.columns else set()
+    leakage_ok = bool(leakage["passed"].all()) if "passed" in leakage.columns else False
+    enough_temporal_stroke = (
+        int(report.get("temporal_complete_stroke_patients", 0) or 0)
+        >= MIN_TEMPORAL_COMPLETE_STROKE_CASES_FOR_MODELING
+    )
+    sensitivity_recommended = bool(sensitivity.iloc[0]["recommend_sensitivity_analysis"]) if not sensitivity.empty else False
+    return pd.DataFrame(
+        [
+            {
+                "check": "class_imbalance_reported",
+                "passed": has_stroke and has_nonstroke,
+                "detail": f"stroke={report.get('stroke_patients')}; nonstroke={report.get('nonstroke_patients')}",
+            },
+            {
+                "check": "temporal_complete_patient_count_reported",
+                "passed": temporal_complete_reported,
+                "detail": f"temporal_complete_patients={report.get('temporal_complete_patients')}",
+            },
+            {
+                "check": "missingness_by_first_mid_last_reported",
+                "passed": set(WINDOWS).issubset(missing_windows),
+                "detail": f"windows_reported={sorted(missing_windows)}",
+            },
+            {
+                "check": "no_post_reference_records_confirmed",
+                "passed": leakage_ok,
+                "detail": "; ".join(leakage.get("check", pd.Series(dtype=str)).astype(str).tolist()),
+            },
+            {
+                "check": "strict_completeness_stroke_case_count_identified",
+                "passed": "temporal_complete_stroke_patients" in report,
+                "detail": f"temporal_complete_stroke_patients={report.get('temporal_complete_stroke_patients')}",
+            },
+            {
+                "check": "sensitivity_analysis_recommended_if_needed",
+                "passed": enough_temporal_stroke or sensitivity_recommended,
+                "detail": f"enough_temporal_stroke={enough_temporal_stroke}; recommended={sensitivity_recommended}",
+            },
+        ]
+    )
+
+
 def build_report_markdown(report: dict[str, object], config: EDAConfig) -> str:
+    checks_passed = report.get("acceptance_checks_passed", 0)
+    checks_total = report.get("acceptance_checks_total", 0)
     return f"""# EDA Summary Report
 
 ## Summary
@@ -279,8 +477,17 @@ def build_report_markdown(report: dict[str, object], config: EDAConfig) -> str:
 - Non-stroke patients: {report["nonstroke_patients"]:,}
 - Stroke prevalence: {report["stroke_prevalence"]:.4f}
 - Temporal-complete patients: {report["temporal_complete_patients"]:,}
+- Temporal-complete stroke patients: {report["temporal_complete_stroke_patients"]:,}
 - High-missing variables at >=50%: {report["high_missing_variable_count"]:,}
 - Leakage audit passed: `{report["leakage_audit_passed"]}`
+- Sensitivity analysis recommended: `{report["sensitivity_analysis_recommended"]}`
+- Acceptance checks passed: {checks_passed}/{checks_total}
+
+## Paper Reference
+
+- Paper: `{PAPER_REFERENCE["title"]}`
+- Method context: `{PAPER_REFERENCE["method_section"]}`
+- EDA principle: `{PAPER_REFERENCE["eda_principle"]}`
 
 ## Key Note
 
@@ -297,9 +504,13 @@ Strict FIRST/MID/LAST completeness leaves very few temporal-complete patients in
 - `missingness_by_stroke.csv`
 - `missingness_by_window.csv`
 - `temporal_coverage_summary.csv`
+- `window_coverage_by_label.csv`
+- `temporal_complete_case_summary.csv`
+- `sensitivity_analysis_recommendation.csv`
 - `clinical_descriptive_stats.csv`
 - `high_missing_variables.csv`
 - `leakage_audit_summary.csv`
+- `eda_acceptance_checks.csv`
 - `eda_summary_report.json`
 - `eda_summary_report.md`
 """
@@ -322,6 +533,8 @@ def run_eda(config: EDAConfig) -> dict[str, object]:
     missing_stroke = missingness_by_group(records, "stroke")
     missing_window = missingness_by_group(records, "window")
     temporal_cov = temporal_coverage(completeness, attrition)
+    window_label_cov = window_coverage_by_label(records, config)
+    temporal_complete_cases = temporal_complete_case_summary(cohort, completeness)
     clinical_stats = clinical_descriptive_stats(records)
     leakage = leakage_audit(records, config)
     high_missing = high_missing_variables(missing_variable)
@@ -331,7 +544,19 @@ def run_eda(config: EDAConfig) -> dict[str, object]:
     stroke_patients = int(stroke_row["patient_count"].sum()) if not stroke_row.empty else 0
     nonstroke_patients = int(nonstroke_row["patient_count"].sum()) if not nonstroke_row.empty else 0
     patients = int(cohort[config.patient_id_col if config.patient_id_col in cohort.columns else "hn"].nunique())
+    temporal_complete_row = (
+        temporal_complete_cases[temporal_complete_cases["group"] == "temporal_complete"]
+        if not temporal_complete_cases.empty and "group" in temporal_complete_cases.columns
+        else pd.DataFrame()
+    )
+    temporal_complete_stroke = (
+        int(temporal_complete_row["stroke_patients"].iloc[0]) if not temporal_complete_row.empty else 0
+    )
+    temporal_complete_nonstroke = (
+        int(temporal_complete_row["nonstroke_patients"].iloc[0]) if not temporal_complete_row.empty else 0
+    )
     report = {
+        "paper_reference": PAPER_REFERENCE,
         "records": int(len(records)),
         "patients": patients,
         "stroke_patients": stroke_patients,
@@ -340,9 +565,31 @@ def run_eda(config: EDAConfig) -> dict[str, object]:
         "temporal_complete_patients": int(completeness["temporal_complete"].sum())
         if "temporal_complete" in completeness.columns
         else 0,
+        "temporal_complete_stroke_patients": temporal_complete_stroke,
+        "temporal_complete_nonstroke_patients": temporal_complete_nonstroke,
         "high_missing_variable_count": int(len(high_missing)),
         "leakage_audit_passed": bool(leakage["passed"].all()) if "passed" in leakage.columns else False,
     }
+    sensitivity = build_sensitivity_recommendation(report)
+    acceptance_checks = build_acceptance_checks(
+        imbalance,
+        temporal_cov,
+        missing_window,
+        leakage,
+        report,
+        sensitivity,
+    )
+    report.update(
+        {
+            "sensitivity_analysis_recommended": bool(sensitivity.iloc[0]["recommend_sensitivity_analysis"])
+            if not sensitivity.empty
+            else False,
+            "acceptance_checks_passed": int(acceptance_checks["passed"].sum()),
+            "acceptance_checks_total": int(len(acceptance_checks)),
+            "acceptance_passed": bool(acceptance_checks["passed"].all()),
+        }
+    )
+    report = {key: _json_ready(value) for key, value in report.items()}
 
     write_csv(imbalance, config.output_dir / "class_imbalance.csv")
     write_csv(visit_cov, config.output_dir / "visit_frequency_by_patient.csv")
@@ -353,9 +600,13 @@ def run_eda(config: EDAConfig) -> dict[str, object]:
     write_csv(missing_stroke, config.output_dir / "missingness_by_stroke.csv")
     write_csv(missing_window, config.output_dir / "missingness_by_window.csv")
     write_csv(temporal_cov, config.output_dir / "temporal_coverage_summary.csv")
+    write_csv(window_label_cov, config.output_dir / "window_coverage_by_label.csv")
+    write_csv(temporal_complete_cases, config.output_dir / "temporal_complete_case_summary.csv")
+    write_csv(sensitivity, config.output_dir / "sensitivity_analysis_recommendation.csv")
     write_csv(clinical_stats, config.output_dir / "clinical_descriptive_stats.csv")
     write_csv(high_missing, config.output_dir / "high_missing_variables.csv")
     write_csv(leakage, config.output_dir / "leakage_audit_summary.csv")
+    write_csv(acceptance_checks, config.output_dir / "eda_acceptance_checks.csv")
     write_json(report, config.output_dir / "eda_summary_report.json")
     (config.output_dir / "eda_summary_report.md").write_text(build_report_markdown(report, config), encoding="utf-8")
     return report

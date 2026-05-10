@@ -17,9 +17,19 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
+
+
+PAPER_REFERENCE = {
+    "title": "Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction",
+    "method_section": "Data Preprocessing",
+    "cleaning_principle": "clean pre-reference EHR records without introducing post-reference leakage",
+    "stroke_icd10_range": "I60-I68",
+}
+STROKE_PATTERN = re.compile(r"\bI6[0-8](?:\.[0-9A-Z]+)?\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -109,6 +119,7 @@ PLAUSIBLE_RANGES = {
 
 DIRECT_IDENTIFIER_COLUMNS = ["ตำบล"]
 ICD_TOKEN_PATTERN = re.compile(r"([A-TV-Z][0-9]{2}(?:\.[0-9A-Z]+)?)", re.IGNORECASE)
+REQUIRED_OUTPUT_COLUMNS = ["patient_id", "visit_date", "reference_date", "stroke", "window"]
 
 
 def load_records(path: Path) -> pd.DataFrame:
@@ -128,6 +139,21 @@ def write_csv(df: pd.DataFrame, path: Path) -> None:
 def write_json(data: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _json_ready(value: Any) -> Any:
+    """แปลงค่าจาก pandas/numpy ให้อยู่ในรูปที่เขียน JSON ได้."""
+    if isinstance(value, dict):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if pd.isna(value):
+        return None
+    if hasattr(value, "item"):
+        return value.item()
+    return value
 
 
 def standardize_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -191,13 +217,22 @@ def normalize_diagnoses(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         if column not in cleaned.columns:
             continue
         normalized_col = f"{column}_normalized"
+        stroke_before = cleaned[column].astype(str).str.contains(STROKE_PATTERN, na=False)
         cleaned[normalized_col] = cleaned[column].apply(normalize_diagnosis_value)
+        stroke_after = cleaned[normalized_col].astype(str).str.contains(STROKE_PATTERN, na=False)
+        stroke_lost = stroke_before & ~stroke_after
+        stroke_added_by_tokenization = ~stroke_before & stroke_after
         rows.append(
             {
                 "source_column": column,
                 "normalized_column": normalized_col,
                 "non_null_before": int(cleaned[column].notna().sum()),
                 "non_null_after": int(cleaned[normalized_col].notna().sum()),
+                "stroke_icd_hits_before": int(stroke_before.sum()),
+                "stroke_icd_hits_after": int(stroke_after.sum()),
+                "stroke_icd_lost_after_normalization": int(stroke_lost.sum()),
+                "stroke_icd_added_by_tokenization": int(stroke_added_by_tokenization.sum()),
+                "stroke_icd_signal_preserved": bool(stroke_lost.sum() == 0),
             }
         )
     return cleaned, pd.DataFrame(rows)
@@ -301,7 +336,137 @@ def check_no_post_reference_records(df: pd.DataFrame) -> bool | None:
     return bool((valid["visit_date"] <= valid["reference_date"]).all())
 
 
+def build_required_column_report(df: pd.DataFrame) -> pd.DataFrame:
+    """ตรวจว่า output หลัง clean ยังมีคอลัมน์ที่ stage ถัดไปต้องใช้ครบ."""
+    return pd.DataFrame(
+        [
+            {
+                "required_column": column,
+                "status": "available" if column in df.columns else "missing",
+                "non_null_count": int(df[column].notna().sum()) if column in df.columns else 0,
+            }
+            for column in REQUIRED_OUTPUT_COLUMNS
+        ]
+    )
+
+
+def build_binary_validation_report(df: pd.DataFrame) -> pd.DataFrame:
+    """ตรวจซ้ำหลัง encoding ว่า binary columns เหลือเฉพาะ 0/1/missing."""
+    rows = []
+    for column in BINARY_COLUMNS:
+        if column not in df.columns:
+            continue
+        invalid = df[column].notna() & ~df[column].isin([0, 1])
+        rows.append(
+            {
+                "column": column,
+                "valid_binary_or_missing": bool(not invalid.any()),
+                "invalid_count_after_cleaning": int(invalid.sum()),
+                "non_null_after_cleaning": int(df[column].notna().sum()),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def build_leakage_audit_report(df: pd.DataFrame) -> pd.DataFrame:
+    """สร้าง leakage audit หลัง cleaning เพื่อยืนยัน invariant จาก Stage 02."""
+    if "visit_date" not in df.columns or "reference_date" not in df.columns:
+        return pd.DataFrame(
+            [
+                {
+                    "check": "no_post_reference_records",
+                    "passed": False,
+                    "detail": "visit_date or reference_date missing",
+                }
+            ]
+        )
+    valid = df[["visit_date", "reference_date"]].dropna()
+    post_reference_count = int((valid["visit_date"] > valid["reference_date"]).sum())
+    return pd.DataFrame(
+        [
+            {
+                "check": "no_post_reference_records",
+                "passed": post_reference_count == 0,
+                "detail": f"post_reference_records={post_reference_count}",
+            },
+            {
+                "check": "date_columns_parseable",
+                "passed": len(valid) > 0,
+                "detail": f"valid_visit_reference_pairs={len(valid)}",
+            },
+        ]
+    )
+
+
+def build_acceptance_checks(
+    cleaned: pd.DataFrame,
+    required_column_report: pd.DataFrame,
+    binary_validation: pd.DataFrame,
+    range_report: pd.DataFrame,
+    range_log: pd.DataFrame,
+    diagnosis_report: pd.DataFrame,
+    leakage_audit: pd.DataFrame,
+) -> pd.DataFrame:
+    """สร้าง acceptance checks ตาม docs/pipeline/03-data-cleaning.md."""
+    required_ok = bool((required_column_report["status"] == "available").all())
+    leakage_ok = bool(leakage_audit["passed"].all()) if not leakage_audit.empty else False
+    binary_ok = (
+        bool(binary_validation["valid_binary_or_missing"].all())
+        if not binary_validation.empty
+        else True
+    )
+    range_logged = (
+        int(range_report["invalid_values_set_missing"].sum()) == 0
+        or not range_log.empty
+    ) if not range_report.empty else True
+    diagnosis_preserved = (
+        bool(diagnosis_report["stroke_icd_signal_preserved"].all())
+        if not diagnosis_report.empty and "stroke_icd_signal_preserved" in diagnosis_report.columns
+        else False
+    )
+    return pd.DataFrame(
+        [
+            {
+                "check": "required_columns_kept",
+                "passed": required_ok,
+                "detail": ", ".join(
+                    required_column_report.loc[
+                        required_column_report["status"] == "missing", "required_column"
+                    ].tolist()
+                ),
+            },
+            {
+                "check": "no_post_reference_records",
+                "passed": leakage_ok,
+                "detail": "; ".join(leakage_audit["detail"].astype(str).tolist()),
+            },
+            {
+                "check": "binary_columns_only_0_1_missing",
+                "passed": binary_ok,
+                "detail": f"columns_checked={len(binary_validation)}",
+            },
+            {
+                "check": "implausible_values_logged",
+                "passed": range_logged,
+                "detail": f"range_invalid_values={int(range_report['invalid_values_set_missing'].sum()) if not range_report.empty else 0}",
+            },
+            {
+                "check": "diagnosis_normalization_preserves_stroke_signal",
+                "passed": diagnosis_preserved,
+                "detail": "ICD-10 I60-I68 hits before/after normalization match",
+            },
+            {
+                "check": "cleaning_does_not_create_new_target_leakage",
+                "passed": leakage_ok and "stroke" in cleaned.columns,
+                "detail": "stroke label retained; records remain pre-reference",
+            },
+        ]
+    )
+
+
 def build_report_markdown(report: dict[str, object], config: DataCleaningConfig) -> str:
+    checks_passed = report.get("acceptance_checks_passed", 0)
+    checks_total = report.get("acceptance_checks_total", 0)
     return f"""# Data Cleaning Report
 
 ## Summary
@@ -315,6 +480,14 @@ def build_report_markdown(report: dict[str, object], config: DataCleaningConfig)
 - Range-invalid values set missing: {report["range_invalid_values_set_missing"]:,}
 - Binary-invalid values set missing: {report["binary_invalid_values_set_missing"]:,}
 - No post-reference records: `{report["no_post_reference_records"]}`
+- Acceptance checks passed: {checks_passed}/{checks_total}
+
+## Paper Reference
+
+- Paper: `{PAPER_REFERENCE["title"]}`
+- Method section: `{PAPER_REFERENCE["method_section"]}`
+- Cleaning principle: `{PAPER_REFERENCE["cleaning_principle"]}`
+- Stroke definition preserved for audit: ICD-10 `{PAPER_REFERENCE["stroke_icd10_range"]}`
 
 ## Outputs
 
@@ -322,6 +495,10 @@ def build_report_markdown(report: dict[str, object], config: DataCleaningConfig)
 - `cleaning_report.json`
 - `cleaning_report.md`
 - `cleaning_log.csv`
+- `data_cleaning_acceptance_checks.csv`
+- `required_output_columns_report.csv`
+- `binary_validation_report.csv`
+- `leakage_audit_after_cleaning.csv`
 - `missing_summary_after_cleaning.csv`
 - `range_summary_after_cleaning.csv`
 - `binary_flag_encoding_map.csv`
@@ -350,6 +527,18 @@ def run_data_cleaning(config: DataCleaningConfig) -> dict[str, object]:
     cleaned, range_report, range_log = apply_range_checks(cleaned)
 
     missing_summary = build_missing_summary(cleaned)
+    required_column_report = build_required_column_report(cleaned)
+    binary_validation = build_binary_validation_report(cleaned)
+    leakage_audit = build_leakage_audit_report(cleaned)
+    acceptance_checks = build_acceptance_checks(
+        cleaned,
+        required_column_report,
+        binary_validation,
+        range_report,
+        range_log,
+        diagnosis_report,
+        leakage_audit,
+    )
     no_post_reference = check_no_post_reference_records(cleaned)
     duplicate_rows_removed = int(duplicate_report["rows_changed"].sum()) if not duplicate_report.empty else 0
     binary_invalid = int(binary_report["invalid_values_set_missing"].sum()) if not binary_report.empty else 0
@@ -364,6 +553,7 @@ def run_data_cleaning(config: DataCleaningConfig) -> dict[str, object]:
     cleaning_log = pd.concat(log_parts, ignore_index=True, sort=False) if log_parts else pd.DataFrame()
 
     report = {
+        "paper_reference": PAPER_REFERENCE,
         "input_path": str(config.input_path),
         "output_dir": str(config.output_dir),
         "rows_before": int(rows_before),
@@ -374,9 +564,26 @@ def run_data_cleaning(config: DataCleaningConfig) -> dict[str, object]:
         "range_invalid_values_set_missing": range_invalid,
         "binary_invalid_values_set_missing": binary_invalid,
         "no_post_reference_records": no_post_reference,
+        "required_output_columns_available": int((required_column_report["status"] == "available").sum()),
+        "required_output_columns_missing": required_column_report.loc[
+            required_column_report["status"] == "missing", "required_column"
+        ].tolist(),
+        "diagnosis_stroke_signal_preserved": bool(
+            diagnosis_report["stroke_icd_signal_preserved"].all()
+        )
+        if not diagnosis_report.empty and "stroke_icd_signal_preserved" in diagnosis_report.columns
+        else False,
+        "acceptance_checks_passed": int(acceptance_checks["passed"].sum()),
+        "acceptance_checks_total": int(len(acceptance_checks)),
+        "acceptance_passed": bool(acceptance_checks["passed"].all()),
     }
+    report = {key: _json_ready(value) for key, value in report.items()}
 
     write_csv(cleaned, config.output_dir / "cleaned_pre_reference_records.csv")
+    write_csv(required_column_report, config.output_dir / "required_output_columns_report.csv")
+    write_csv(binary_validation, config.output_dir / "binary_validation_report.csv")
+    write_csv(leakage_audit, config.output_dir / "leakage_audit_after_cleaning.csv")
+    write_csv(acceptance_checks, config.output_dir / "data_cleaning_acceptance_checks.csv")
     write_csv(missing_summary, config.output_dir / "missing_summary_after_cleaning.csv")
     write_csv(range_report, config.output_dir / "range_summary_after_cleaning.csv")
     write_csv(binary_report, config.output_dir / "binary_flag_encoding_map.csv")

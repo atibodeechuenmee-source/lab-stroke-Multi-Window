@@ -23,6 +23,120 @@ from src.target_cohort import TargetCohortConfig, run_target_cohort
 from src.validation import ValidationConfig, run_validation
 
 
+PAPER_TITLE = "Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction"
+PAPER_ARTIFACTS = {
+    "pdf": Path("paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.pdf"),
+    "thai_translation": Path(
+        "paper/source/Multi-Window_Timeframe_Temporal_Features_for_Stroke-Risk_Prediction.th.md"
+    ),
+    "research_note": Path("paper/multi-window-temporal-features-stroke-risk-2026.md"),
+    "pipeline_overview": Path("docs/pipeline/00-pipeline-overview.md"),
+}
+STROKE_ICD10_RANGE = "I60-I68"
+TEMPORAL_WINDOWS = {
+    "FIRST": {
+        "start_months_before_reference": 21,
+        "end_months_before_reference": 9,
+        "paper_label": "21-9 months before reference date",
+    },
+    "MID": {
+        "start_months_before_reference": 18,
+        "end_months_before_reference": 6,
+        "paper_label": "18-6 months before reference date",
+    },
+    "LAST": {
+        "start_months_before_reference": 15,
+        "end_months_before_reference": 3,
+        "paper_label": "15-3 months before reference date",
+    },
+}
+FEATURE_SETS = {
+    "single_shot_baseline": "Latest pre-reference clinical snapshot used as the required comparator.",
+    "extract_set_1": "Core demographic and clinical variables across FIRST/MID/LAST windows.",
+    "extract_set_2": "Extract Set 1 plus statistical and temporal descriptors.",
+    "extract_set_3": "Extract Set 2 plus diabetes, hypertension, heart disease, medication flags, and TC:HDL.",
+}
+PRIMARY_METRICS = ["sensitivity", "specificity", "G-Mean"]
+LEAKAGE_GUARDRAILS = [
+    "Stroke patients use first stroke event as reference date.",
+    "Non-stroke patients use last clinical visit as reference date.",
+    "All post-reference records must be removed before cleaning, EDA, features, modeling, and validation.",
+    "Temporal features must be derived only from FIRST/MID/LAST retrospective windows.",
+]
+STAGE_SEQUENCE = [
+    {
+        "stage": "00",
+        "name": "Pipeline overview",
+        "module": "src.temporal_pipeline",
+        "doc": "docs/pipeline/00-pipeline-overview.md",
+        "paper_method": "Project-level blueprint and leakage policy",
+    },
+    {
+        "stage": "01",
+        "name": "Raw data audit",
+        "module": "src.raw_data",
+        "doc": "docs/pipeline/01-raw-data.md",
+        "paper_method": "Data Collection",
+    },
+    {
+        "stage": "02",
+        "name": "Target and cohort",
+        "module": "src.target_cohort",
+        "doc": "docs/pipeline/02-target-and-cohort.md",
+        "paper_method": "Data Selection",
+    },
+    {
+        "stage": "03",
+        "name": "Data cleaning",
+        "module": "src.data_cleaning",
+        "doc": "docs/pipeline/03-data-cleaning.md",
+        "paper_method": "Preprocessing",
+    },
+    {
+        "stage": "04",
+        "name": "EDA",
+        "module": "src.eda",
+        "doc": "docs/pipeline/04-eda.md",
+        "paper_method": "Dataset characterization and leakage audit",
+    },
+    {
+        "stage": "05",
+        "name": "Feature engineering",
+        "module": "src.feature_engineering",
+        "doc": "docs/pipeline/05-feature-engineering.md",
+        "paper_method": "Feature Extraction",
+    },
+    {
+        "stage": "06",
+        "name": "Modeling",
+        "module": "src.modeling",
+        "doc": "docs/pipeline/06-modeling.md",
+        "paper_method": "Logistic Regression and LOOCV/patient-level CV",
+    },
+    {
+        "stage": "07",
+        "name": "Feature importance",
+        "module": "src.feature_importance",
+        "doc": "docs/pipeline/07-feature-importance.md",
+        "paper_method": "ANOVA, PCA, ANOVA plus PCA",
+    },
+    {
+        "stage": "08",
+        "name": "Validation",
+        "module": "src.validation",
+        "doc": "docs/pipeline/08-validation.md",
+        "paper_method": "Sensitivity, specificity, G-Mean, McNemar's test",
+    },
+    {
+        "stage": "09",
+        "name": "Deployment notes",
+        "module": None,
+        "doc": "docs/pipeline/09-deployment-optional.md",
+        "paper_method": "Optional implementation notes beyond the paper",
+    },
+]
+
+
 @dataclass(frozen=True)
 class PipelineConfig:
     raw_path: Path = Path("data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx")
@@ -36,6 +150,108 @@ class PipelineConfig:
 def write_json(data: dict[str, Any], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def build_stage_00_overview(config: PipelineConfig, dirs: dict[str, Path]) -> dict[str, Any]:
+    """สร้าง Stage 00 metadata ตามเอกสาร pipeline overview.
+
+    Stage 00 ไม่ได้แปลงข้อมูลผู้ป่วยโดยตรง แต่ทำหน้าที่เป็น contract กลางของ pipeline:
+    ระบุ paper blueprint, กติกากัน leakage, stage order, temporal windows, feature sets,
+    metrics หลัก และตำแหน่ง output ของแต่ละ stage เพื่อให้ manifest อ่านได้ว่า run นี้ยึด paper อย่างไร
+    ก่อนจะเริ่ม Stage 01-08 จริง
+    """
+    stage_docs = {item["stage"]: Path(str(item["doc"])) for item in STAGE_SEQUENCE if item["doc"]}
+    return {
+        "paper_title": PAPER_TITLE,
+        "stroke_icd10_definition": STROKE_ICD10_RANGE,
+        "raw_input": str(config.raw_path),
+        "raw_input_exists": config.raw_path.exists(),
+        "paper_artifacts": {
+            name: {"path": str(path), "exists": path.exists()} for name, path in PAPER_ARTIFACTS.items()
+        },
+        "stage_documents": {
+            stage: {"path": str(path), "exists": path.exists()} for stage, path in stage_docs.items()
+        },
+        "stage_outputs": {name: str(path) for name, path in dirs.items()},
+        "temporal_windows": TEMPORAL_WINDOWS,
+        "feature_sets": FEATURE_SETS,
+        "primary_metrics": PRIMARY_METRICS,
+        "leakage_guardrails": LEAKAGE_GUARDRAILS,
+        "stage_sequence": STAGE_SEQUENCE,
+    }
+
+
+def evaluate_stage_00_acceptance(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    """สรุป acceptance checks ระดับภาพรวมจากผลของ stage ที่รันแล้ว.
+
+    จุดประสงค์คือให้ `pipeline_manifest.json` ตอบได้ทันทีว่า run นี้ยังรักษาหลักจาก paper หรือไม่
+    เช่น raw input มีจริง, docs ครบ, ไม่มี post-reference leakage, มี single-shot comparator,
+    มี metric หลัก และ validation รองรับ McNemar's test เมื่อรันถึง Stage 08
+    """
+    overview = manifest["stage_00_pipeline_overview"]
+    stages = manifest["stages"]
+    stage_02 = stages.get("stage_02_target_cohort", {})
+    stage_03 = stages.get("stage_03_data_cleaning", {})
+    stage_05 = stages.get("stage_05_feature_engineering", {})
+    stage_08 = stages.get("stage_08_validation", {})
+
+    no_post_reference_flags = [
+        stage_02.get("no_post_reference_records"),
+        stage_03.get("no_post_reference_records"),
+        stage_05.get("no_post_reference_records"),
+    ]
+    no_post_reference_passed = all(flag is True for flag in no_post_reference_flags)
+
+    return [
+        {
+            "check": "raw_input_exists",
+            "passed": bool(overview["raw_input_exists"]),
+            "detail": overview["raw_input"],
+        },
+        {
+            "check": "paper_artifacts_available",
+            "passed": all(item["exists"] for item in overview["paper_artifacts"].values()),
+            "detail": overview["paper_artifacts"],
+        },
+        {
+            "check": "stage_documents_available",
+            "passed": all(item["exists"] for item in overview["stage_documents"].values()),
+            "detail": overview["stage_documents"],
+        },
+        {
+            "check": "paper_default_temporal_windows_registered",
+            "passed": set(overview["temporal_windows"]) == {"FIRST", "MID", "LAST"},
+            "detail": overview["temporal_windows"],
+        },
+        {
+            "check": "post_reference_leakage_guardrail",
+            "passed": no_post_reference_passed,
+            "detail": {
+                "stage_02": stage_02.get("no_post_reference_records"),
+                "stage_03": stage_03.get("no_post_reference_records"),
+                "stage_05": stage_05.get("no_post_reference_records"),
+            },
+        },
+        {
+            "check": "single_shot_baseline_available",
+            "passed": int(stage_05.get("single_shot_rows", 0) or 0) > 0,
+            "detail": {"single_shot_rows": stage_05.get("single_shot_rows")},
+        },
+        {
+            "check": "primary_metrics_registered",
+            "passed": {"sensitivity", "specificity", "G-Mean"}.issubset(set(overview["primary_metrics"])),
+            "detail": overview["primary_metrics"],
+        },
+        {
+            "check": "mcnemar_validation_supported",
+            "passed": bool(manifest["skip_modeling"]) or "mcnemar_status" in stage_08,
+            "detail": {
+                "skip_modeling": manifest["skip_modeling"],
+                "mcnemar_status": stage_08.get("mcnemar_status"),
+                "mcnemar_reason": stage_08.get("mcnemar_reason"),
+            },
+        },
+    ]
 
 
 def stage_dirs(root: Path) -> dict[str, Path]:
@@ -59,6 +275,7 @@ def run_pipeline(config: PipelineConfig, skip_modeling: bool = False) -> dict[st
     """
     dirs = stage_dirs(config.output_dir)
     config.output_dir.mkdir(parents=True, exist_ok=True)
+    stage_00_overview = build_stage_00_overview(config, dirs)
 
     # Stage 01: ตรวจ raw data แบบ read-only
     raw_report = run_raw_data_audit(
@@ -116,6 +333,7 @@ def run_pipeline(config: PipelineConfig, skip_modeling: bool = False) -> dict[st
     )
 
     manifest: dict[str, Any] = {
+        "stage_00_pipeline_overview": stage_00_overview,
         "raw_path": str(config.raw_path),
         "output_dir": str(config.output_dir),
         "skip_modeling": skip_modeling,
@@ -160,6 +378,7 @@ def run_pipeline(config: PipelineConfig, skip_modeling: bool = False) -> dict[st
             }
         )
 
+    manifest["stage_00_acceptance_checks"] = evaluate_stage_00_acceptance(manifest)
     write_json(manifest, config.output_dir / "pipeline_manifest.json")
     return manifest
 

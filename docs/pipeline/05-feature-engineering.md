@@ -1,4 +1,4 @@
-# Stage 05: Temporal Feature Engineering
+﻿# Stage 05: Temporal Feature Engineering
 
 ## Purpose
 
@@ -110,4 +110,4 @@ Slope(X) = (X_LAST - X_FIRST) / (t_LAST - t_FIRST)
 
 Stage นี้ตรงกับ Feature Extraction ของ paper โดยตรง และต้องใช้ overlapping multi-window representation ตามภาพใน paper ไม่ใช่ mutually exclusive binning
 
-ถ้า Stage 02 ยังส่ง `window` เป็น label เดียวแบบ exclusive อยู่ Stage 05 จะยังไม่ตรง paper แม้ feature count จะเท่ากับ 35/115/121 แล้วก็ตาม
+Stage 02 ปัจจุบันส่ง overlapping window membership แบบ long format แล้ว ดังนั้น Stage 05 ต้องใช้เฉพาะแถว `FIRST/MID/LAST` สำหรับ temporal features และกัน `prediction window` ออกจาก feature extraction เสมอ

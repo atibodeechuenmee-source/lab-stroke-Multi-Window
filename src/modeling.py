@@ -43,6 +43,8 @@ class ModelingConfig:
     target_col: str = "stroke"
     threshold: float = 0.5
     max_folds: int = 5
+    cv_strategy: str = "loocv"
+    n_jobs: int = -1
     random_state: int = 42
 
 
@@ -106,7 +108,13 @@ def numeric_feature_matrix(table: pd.DataFrame, config: ModelingConfig) -> tuple
 
 
 def choose_cv(y: pd.Series, config: ModelingConfig):
-    """เลือก CV strategy ตาม class distribution และขนาดข้อมูล."""
+    """เลือก CV strategy ตาม paper หรือ fallback ที่ผู้ใช้ระบุ.
+
+    Paper ใช้ Leave-One-Out Cross-Validation (LOOCV) เพื่อให้ test case เป็นผู้ป่วยทีละ 1 คน
+    และรักษา patient-level independence มากที่สุด เดิมโปรเจกต์ใช้ StratifiedKFold เมื่อข้อมูลใหญ่
+    เพื่อให้รันเร็วขึ้น แต่เมื่อ `cv_strategy="loocv"` ฟังก์ชันนี้จะใช้ LOOCV จริงกับทุก feature table
+    เพื่อให้ Stage 06 ตรงกับงานวิจัยมากขึ้น
+    """
     from sklearn.model_selection import LeaveOneOut, StratifiedKFold
 
     class_counts = y.value_counts()
@@ -115,6 +123,12 @@ def choose_cv(y: pd.Series, config: ModelingConfig):
     min_class = int(class_counts.min())
     if min_class < 2:
         return None, "not_run_min_class_lt_2"
+    requested = config.cv_strategy.lower()
+    if requested == "loocv":
+        return LeaveOneOut(), "LOOCV"
+    if requested == "stratified":
+        folds = min(config.max_folds, min_class)
+        return StratifiedKFold(n_splits=folds, shuffle=True, random_state=config.random_state), f"StratifiedKFold_{folds}"
     if len(y) <= 200:
         return LeaveOneOut(), "LOOCV"
     folds = min(config.max_folds, min_class)
@@ -137,6 +151,7 @@ def make_model(config: ModelingConfig):
                 LogisticRegression(
                     class_weight="balanced",
                     max_iter=2000,
+                    solver="liblinear",
                     random_state=config.random_state,
                 ),
             ),
@@ -172,6 +187,8 @@ def evaluate_predictions(y_true: list[int], y_pred: list[int], y_prob: list[floa
 
 def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfig) -> tuple[pd.DataFrame, dict, dict]:
     """เทรนและทำนายแบบ cross-validation สำหรับโมเดลหนึ่งชุด."""
+    from sklearn.model_selection import cross_val_predict
+
     x, y, patient_ids = numeric_feature_matrix(table, config)
     cv, cv_name = choose_cv(y, config)
     base_config = {
@@ -180,6 +197,7 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
         "class_weight": "balanced",
         "threshold": config.threshold,
         "cv_strategy": cv_name,
+        "requested_cv_strategy": config.cv_strategy,
         "n_patients": int(len(y)),
         "n_features": int(x.shape[1]),
         "target_positive_count": int((y == 1).sum()),
@@ -212,9 +230,8 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
         }
         return predictions, metrics, base_config
 
-    model = make_model(config)
-    rows = []
     patient_overlap_detected = False
+    fold_by_row = np.zeros(len(y), dtype=int)
     for fold_idx, (train_idx, test_idx) in enumerate(cv.split(x, y), start=1):
         # patient-level leakage guard: ห้ามมีคนไข้ซ้ำระหว่าง train/test ใน fold เดียวกัน
         train_ids = set(patient_ids.iloc[train_idx])
@@ -222,22 +239,28 @@ def train_predict_cv(model_name: str, table: pd.DataFrame, config: ModelingConfi
         if train_ids & test_ids:
             patient_overlap_detected = True
             raise RuntimeError("Patient leakage detected: train/test patient ids overlap in a fold.")
-        model.fit(x.iloc[train_idx], y.iloc[train_idx])
-        probs = model.predict_proba(x.iloc[test_idx])[:, 1]
-        preds = (probs >= config.threshold).astype(int)
-        for pid, true, pred, prob in zip(patient_ids.iloc[test_idx], y.iloc[test_idx], preds, probs):
-            rows.append(
-                {
-                    config.patient_id_col: pid,
-                    "model_name": model_name,
-                    "fold": fold_idx,
-                    "y_true": int(true),
-                    "y_pred": int(pred),
-                    "y_prob": float(prob),
-                }
-            )
+        fold_by_row[test_idx] = fold_idx
 
-    predictions = pd.DataFrame(rows)
+    model = make_model(config)
+    probs = cross_val_predict(
+        model,
+        x,
+        y,
+        cv=cv,
+        method="predict_proba",
+        n_jobs=config.n_jobs,
+    )[:, 1]
+    preds = (probs >= config.threshold).astype(int)
+    predictions = pd.DataFrame(
+        {
+            config.patient_id_col: patient_ids.to_numpy(),
+            "model_name": model_name,
+            "fold": fold_by_row,
+            "y_true": y.astype(int).to_numpy(),
+            "y_pred": preds.astype(int),
+            "y_prob": probs.astype(float),
+        }
+    )
     eval_metrics = evaluate_predictions(
         predictions["y_true"].astype(int).tolist(),
         predictions["y_pred"].astype(int).tolist(),
@@ -289,7 +312,7 @@ def build_cv_policy_report(metrics_df: pd.DataFrame) -> pd.DataFrame:
                 "paper_cv_exact_match": bool(cv_strategy == PAPER_REFERENCE["paper_cv_strategy"]),
                 "fallback_reason": ""
                 if cv_strategy == PAPER_REFERENCE["paper_cv_strategy"]
-                else "large baseline table uses stratified patient-level CV; insufficient temporal class count may skip",
+                else "requested non-LOOCV strategy or auto fallback due to runtime/class constraints",
                 "n_patients": row.get("n_patients", 0),
                 "target_positive_count": row.get("target_positive_count", 0),
                 "target_negative_count": row.get("target_negative_count", 0),
@@ -466,7 +489,7 @@ def build_report_markdown(summary: dict[str, object], metrics: pd.DataFrame) -> 
 
 ## Notes
 
-Logistic Regression uses `class_weight="balanced"` and patient-level cross-validation. LOOCV is used automatically for small feature tables; larger tables use stratified patient-level CV for computational practicality.
+Logistic Regression uses `class_weight="balanced"` and patient-level cross-validation. The default project setting is now `cv_strategy="loocv"` to match the paper. Use `--cv-strategy auto` or `--cv-strategy stratified` only when a faster fallback run is intentionally needed.
 
 ## Skipped Models
 
@@ -492,6 +515,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default=str(ModelingConfig.output_dir))
     parser.add_argument("--max-folds", type=int, default=ModelingConfig.max_folds)
     parser.add_argument("--threshold", type=float, default=ModelingConfig.threshold)
+    parser.add_argument(
+        "--cv-strategy",
+        choices=["loocv", "stratified", "auto"],
+        default=ModelingConfig.cv_strategy,
+        help="Cross-validation strategy. Use loocv to match the paper.",
+    )
+    parser.add_argument("--n-jobs", type=int, default=ModelingConfig.n_jobs)
     return parser.parse_args()
 
 
@@ -502,6 +532,8 @@ def main() -> None:
         output_dir=Path(args.output_dir),
         max_folds=args.max_folds,
         threshold=args.threshold,
+        cv_strategy=args.cv_strategy,
+        n_jobs=args.n_jobs,
     )
     report = run_modeling(config)
     print(json.dumps(report, ensure_ascii=True, indent=2))

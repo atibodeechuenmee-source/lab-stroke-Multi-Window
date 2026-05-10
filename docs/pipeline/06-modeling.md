@@ -18,8 +18,8 @@ Train และ evaluate stroke-risk prediction models ให้ใกล้ pap
 2. Prepare numeric feature matrix
 3. Keep patient-level independence
 4. Select CV strategy:
-   - Paper default: LOOCV
-   - Project fallback: patient-level StratifiedKFold เมื่อข้อมูลใหญ่หรือเพื่อให้รันได้จริง
+   - Paper-aligned default: LOOCV
+   - Project fallback by explicit option: patient-level StratifiedKFold เมื่อผู้ใช้ต้องการ faster diagnostic run
    - Skip เมื่อ class distribution ไม่พอ
 5. Train Logistic Regression:
 
@@ -41,6 +41,7 @@ LogisticRegression(class_weight="balanced")
 - `model_config_log.csv`
 - `all_model_predictions.csv`
 - `<model_name>_predictions.csv`
+- `cv_policy_report.csv`
 - `modeling_report.json`
 - `modeling_report.md`
 
@@ -56,3 +57,5 @@ LogisticRegression(class_weight="balanced")
 ## Relation to Paper
 
 Paper ใช้ Logistic Regression with `class_weight="balanced"` และ LOOCV เพราะข้อมูล imbalance และต้องการ patient-level independence Stage นี้จึงต้องรักษาแนวคิดเดียวกัน แม้โปรเจกต์จะมี fallback เพื่อให้รันได้จริงบนข้อมูลที่มีข้อจำกัด
+
+ค่า default ของ implementation ปัจจุบันคือ `cv_strategy="loocv"` เพื่อให้ตรงกับ paper โดยตรง หากต้องการรันเร็วเพื่อ debug สามารถใช้ `--cv-strategy auto` หรือ `--cv-strategy stratified` ได้ แต่ผลลัพธ์ดังกล่าวควรถูกระบุว่าเป็น fallback run ไม่ใช่ paper-exact run

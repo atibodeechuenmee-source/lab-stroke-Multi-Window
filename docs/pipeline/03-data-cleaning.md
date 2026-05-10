@@ -10,6 +10,8 @@
 - Column mapping จาก raw schema
 - Diagnosis fields และ clinical variables ที่ใช้ใน paper
 
+หมายเหตุ: ไฟล์จาก Stage 02 อาจอยู่ใน long format ที่ record เดียวถูกขยายเป็นหลายแถวตาม overlapping window membership เช่น FIRST และ MID พร้อมกัน
+
 ## Process
 
 1. Standardize column names:
@@ -55,6 +57,7 @@
 ## Checks / Acceptance Criteria
 
 - Cleaned data must keep `patient_id`, `visit_date`, `reference_date`, `stroke`, `window`
+- If Stage 02 uses long-format overlapping windows, cleaning must preserve all duplicated window-membership rows
 - No post-reference records
 - Binary columns contain only `0`, `1`, or missing
 - Implausible clinical values must be logged

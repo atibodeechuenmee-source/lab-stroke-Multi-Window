@@ -46,6 +46,16 @@ MID   = 18-6 เดือนก่อน reference date
 LAST  = 15-3 เดือนก่อน reference date
 ```
 
+จากภาพใน paper ช่วง FIRST/MID/LAST เป็น overlapping windows ไม่ใช่ mutually exclusive bins:
+
+```text
+12 เดือนก่อน reference date -> FIRST, MID, LAST
+8 เดือนก่อน reference date  -> MID, LAST
+4 เดือนก่อน reference date  -> LAST
+```
+
+ดังนั้น record เดียวอาจถูกใช้ซ้ำในหลาย temporal windows ระหว่าง feature extraction ได้ และ Stage 02 ควรเก็บ window membership แบบ long format หรือ multi-hot flags ไม่ใช่ label เดียว
+
 Paper-default cohort rules:
 
 - Stroke patient: `reference date` = first stroke event
@@ -68,6 +78,7 @@ Paper-default cohort rules:
 - ไม่มี stage ใดใช้ post-reference data เพื่อสร้าง target, features, model หรือ validation
 - Single-shot baseline ต้องถูกเก็บเป็น comparator เสมอ
 - Temporal features ต้องอ้างอิง FIRST/MID/LAST ตาม paper เป็น default
+- Temporal windows ต้องรองรับ overlapping membership
 - Metrics หลักต้องมี sensitivity, specificity และ G-Mean
 - Validation ต้องรองรับ McNemar's test เมื่อมี paired predictions
 

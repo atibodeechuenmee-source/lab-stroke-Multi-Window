@@ -26,6 +26,7 @@
    - patients with MID visit
    - patients with LAST visit
    - patients complete in all windows
+   - records that contribute to multiple overlapping windows
 4. Missingness:
    - by variable
    - by stroke label
@@ -60,6 +61,7 @@
 - Must report class imbalance
 - Must report temporal-complete patient count
 - Must show missingness by FIRST/MID/LAST
+- Must report overlapping window membership behavior
 - Must confirm no post-reference records
 - Must identify whether strict paper completeness leaves enough stroke cases
 - Must recommend sensitivity analysis if temporal-complete cohort is too small

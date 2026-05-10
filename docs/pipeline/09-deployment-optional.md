@@ -23,6 +23,7 @@ Stage นี้ optional เพราะ paper ยังเป็นงานว
    - diagnosis
    - medication/risk factors
    - enough visits in required windows
+   - overlapping FIRST/MID/LAST coverage when temporal model is used
 2. Check whether a patient has enough temporal coverage
 3. Fall back rules:
    - if temporal completeness fails, use single-shot baseline
@@ -55,6 +56,7 @@ Stage นี้ optional เพราะ paper ยังเป็นงานว
 - Must state that current model is research-stage unless externally validated
 - Must not hide temporal-completeness limitations
 - Must include fallback for insufficient window coverage
+- Must document that FIRST/MID/LAST are overlapping retrospective windows
 - Must include monitoring plan
 - Must include clinician-review requirement before real use
 

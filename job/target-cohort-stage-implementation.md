@@ -1,59 +1,62 @@
-# งาน: Implement Stage 02 Target and Cohort
+# งาน: Update Stage 02 Target and Cohort
 
 ## เป้าหมาย
 
-สร้างโค้ดจาก `docs/pipeline/02-target-and-cohort.md` เพื่อสร้าง patient-level cohort, stroke target, reference date, pre-reference records, temporal window assignment และ temporal completeness flags
+อัปเดต `src/target_cohort.py` ให้ทำ Stage 02 ตาม `docs/pipeline/02-target-and-cohort.md` ล่าสุด และผูกกับวิธีของงานวิจัย `Multi-Window Timeframe Temporal Features for Stroke-Risk Prediction` ให้ชัดขึ้น
 
-Stage นี้เป็นจุดกัน data leakage ที่สำคัญที่สุดของ pipeline เพราะต้องตัด records หลัง stroke event หรือหลัง reference date ออกก่อนสร้าง features
+Stage นี้เป็นจุดกัน data leakage หลักของ pipeline เพราะเป็นขั้นที่กำหนด `reference date` และตัด records หลัง reference date ก่อนส่งต่อให้ cleaning, EDA, feature engineering และ modeling
 
-## ไฟล์โค้ดที่สร้าง
+## ไฟล์โค้ดที่เกี่ยวข้อง
 
 - `src/target_cohort.py`
+- `docs/pipeline/02-target-and-cohort.md`
 
-## สิ่งที่โค้ดทำ
+## สิ่งที่อัปเดตในโค้ด
 
-`src/target_cohort.py` ทำงานเป็น CLI/module แยกสำหรับ Stage 02:
+เพิ่ม paper metadata:
 
-- โหลด raw หรือ lightly standardized EHR records จาก Excel/CSV
-- ตรวจ required columns เช่น patient id, visit date และ diagnosis fields
-- identify stroke event จาก ICD-10 `I60-I68`
-- สร้าง patient-level label:
-  - `stroke = 1` ถ้าพบ stroke event อย่างน้อยหนึ่งครั้ง
-  - `stroke = 0` ถ้าไม่พบ stroke event
-- กำหนด `reference_date`:
-  - stroke patient ใช้ first stroke event date
-  - non-stroke patient ใช้ last visit date
-- ลบ post-reference records เพื่อป้องกัน leakage
-- คำนวณ `days_before_reference` และ `months_before_reference`
-- assign temporal windows:
-  - FIRST: 21-9 เดือนก่อน reference date
-  - MID: 18-6 เดือนก่อน reference date
-  - LAST: 15-3 เดือนก่อน reference date
-- ตรวจ temporal completeness จาก visit coverage และ core clinical columns
-- สร้าง cohort attrition report
-- สร้าง quality-check summary เพื่อยืนยัน acceptance criteria
+- paper title
+- method section: Data Selection
+- stroke ICD-10 range `I60-I68`
+- stroke reference rule: first stroke event date
+- non-stroke reference rule: last clinical visit date
+- formula ของ `months_before_reference`
 
-## วิธีรัน
+เพิ่ม window metadata:
 
-ใช้ค่า default:
+- `FIRST`: 21-9 เดือนก่อน `reference date`
+- `MID`: 18-6 เดือนก่อน `reference date`
+- `LAST`: 15-3 เดือนก่อน `reference date`
+- ทุก window ใช้ boundary แบบ inclusive ตามสเปก pipeline
+- จากภาพใน paper windows ทั้งสามเป็น overlapping windows ไม่ใช่ exclusive bins
+- record เดียวอาจต้องถูก represent ในหลาย windows เช่น 12 เดือนก่อน reference date อยู่ใน FIRST, MID และ LAST
 
-```powershell
-python -m src.target_cohort
-```
+เพิ่มข้อมูลใน patient-level cohort:
 
-ระบุ input/output เอง:
+- `stroke_event_count`
+- `stroke_event_sources`
+- `followup_days_before_reference`
+- `reference_rule`
 
-```powershell
-python -m src.target_cohort --input-path data/raw/patients_with_tc_hdl_ratio_with_drugflag.xlsx --output-dir output/target_cohort_output
-```
+เพิ่ม audit/report ใหม่:
 
-ระบุชื่อ columns เองถ้าข้อมูลเปลี่ยน:
+- `reference_date_audit.csv`
+- `window_distribution_report.csv`
+- `temporal_completeness_summary.csv`
+- `target_cohort_acceptance_checks.csv`
 
-```powershell
-python -m src.target_cohort --patient-id-col hn --visit-date-col vstdate --principal-dx-col PrincipleDiagnosis --comorbidity-dx-col ComorbidityDiagnosis
-```
+เพิ่ม summary fields ใน `target_cohort_summary.json`:
 
-## Output
+- `paper_reference`
+- `temporal_windows`
+- `reference_date_audit_passed`
+- `records_in_paper_windows`
+- `patients_in_any_paper_window`
+- `acceptance_checks_passed`
+- `acceptance_checks_total`
+- `acceptance_passed`
+
+## Output จาก Stage 02
 
 Default output directory:
 
@@ -61,25 +64,88 @@ Default output directory:
 output/target_cohort_output
 ```
 
-ไฟล์ที่สร้าง:
+ไฟล์ที่ Stage 02 สร้าง:
 
 - `patient_level_cohort.csv`
 - `pre_reference_records_with_windows.csv`
 - `temporal_completeness_flags.csv`
+- `temporal_completeness_summary.csv`
 - `cohort_attrition_report.csv`
+- `reference_date_audit.csv`
+- `window_distribution_report.csv`
+- `target_cohort_acceptance_checks.csv`
 - `target_cohort_summary.json`
 - `target_cohort_report.md`
 
-## Acceptance Criteria
+## Acceptance Checks
 
-- ไม่มี records ที่ visit date มากกว่า reference date ใน output
-- stroke patient ใช้ first stroke date เป็น reference date
-- non-stroke patient ใช้ last visit date เป็น reference date
-- มี FIRST/MID/LAST window assignment สำหรับ records ที่อยู่ในช่วง paper
-- มี temporal completeness flags แยกตาม window
-- มี cohort attrition report เพื่อบอกจำนวน patients/records ที่ถูกคัดออกในแต่ละขั้น
+`target_cohort_acceptance_checks.csv` ตรวจหัวข้อหลักต่อไปนี้:
+
+- stroke patients ใช้ first stroke event date เป็น `reference_date`
+- non-stroke patients ใช้ last clinical visit date เป็น `reference_date`
+- ไม่มี records หลัง `reference_date`
+- ใช้ paper-default windows `FIRST/MID/LAST`
+- รองรับ overlapping window membership ตามภาพใน paper
+- attrition report มีขั้น `temporal_complete`
+- temporal-complete cohort ถูก report แยกจาก cohort ทั้งหมด
+
+## วิธีรัน
+
+ใช้ค่า default:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.target_cohort
+```
+
+ระบุ output directory แยก:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.target_cohort --output-dir output/pipeline_runs/stage02_update_test
+```
+
+ระบุ column mapping เอง:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.target_cohort --patient-id-col hn --visit-date-col vstdate --principal-dx-col PrincipleDiagnosis --comorbidity-dx-col ComorbidityDiagnosis
+```
+
+## ผลทดสอบล่าสุด
+
+ตรวจ syntax:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile src\target_cohort.py
+```
+
+ผลลัพธ์: ผ่าน
+
+รัน Stage 02:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.target_cohort --output-dir output/pipeline_runs/stage02_update_test
+```
+
+ผลลัพธ์สำคัญ:
+
+- patients: 13,635
+- stroke patients: 969
+- non-stroke patients: 12,666
+- pre-reference records: 194,231
+- temporal-complete patients: 13
+- records in FIRST/MID/LAST windows: 44,977
+- patients in any paper window: 11,787
+- no post-reference records: true
+- reference date audit passed: true
+- acceptance checks: 6/6 ผ่าน
+
+## ข้อควรระวัง
+
+- Stage 02 ยังไม่ clean clinical values เชิงลึก หน้าที่นั้นอยู่ใน Stage 03
+- Stage 02 ต้องไม่ใช้ข้อมูลหลัง `reference_date` ใน output ที่ส่งต่อ
+- หมายเหตุสำคัญจากการทบทวนภาพ paper: implementation ปัจจุบันควรถูกตรวจต่อว่า `window` เป็น label เดียวหรือ long-format overlapping membership ถ้ายังเป็น label เดียวต้องแก้โค้ด Stage 02/05 ต่อ
+- temporal-complete cohort น้อยมากในข้อมูลจริงปัจจุบัน จึงควรรายงาน attrition ชัดเจน และค่อยทำ sensitivity analysis ในขั้น validation/analysis หากต้องการใช้ window อื่น
+- `output/` เป็น generated artifacts และอาจมี derived patient-level data จึงไม่ควร commit/push
 
 ## สถานะ
 
-Implemented แล้วเป็น module แยกจาก `src/temporal_pipeline.py` และสามารถใช้ output เป็น input ของ Stage 05 feature engineering ได้
-
+Implemented และทดสอบผ่านแล้ว
